@@ -1,0 +1,7 @@
+<svg width="220" height="118" viewBox="0 0 220 118" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M36 76c19 0 34-15 34-34H2c0 19 15 34 34 34Z" fill="#FFE86A"/>
+  <path d="M3 47h67M7 59h58M15 71h42" stroke="#111827" stroke-width="6" stroke-linecap="round"/>
+  <path d="M58 42h20c11 0 19-6 22-16" stroke="#111827" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="32" cy="84" r="7" fill="#111827"/>
+  <text x="8" y="106" fill="#111827" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700">PERMARKET</text>
+</svg>

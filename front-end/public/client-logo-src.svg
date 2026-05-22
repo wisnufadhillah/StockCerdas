@@ -1,0 +1,6 @@
+<svg width="220" height="118" viewBox="0 0 220 118" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="16" y="28" width="188" height="62" rx="6" fill="#0F8276" stroke="#FFD63D" stroke-width="7"/>
+  <path d="M43 42h24v24H43z" fill="#EF233C"/>
+  <path d="M43 76 67 52M54 78l18-18M36 61l18-18" stroke="#0F8276" stroke-width="5"/>
+  <text x="78" y="72" fill="#EF233C" font-family="Arial, Helvetica, sans-serif" font-size="50" font-weight="900">SRC</text>
+</svg>
