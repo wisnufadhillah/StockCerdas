@@ -1,7 +1,0 @@
-<svg width="228" height="48" viewBox="0 0 228 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="2" y="4" width="40" height="40" rx="7" fill="white"/>
-  <path d="M22 11.5L33 17.8V30.2L22 36.5L11 30.2V17.8L22 11.5Z" stroke="#0F8276" stroke-width="2"/>
-  <path d="M11.4 18L22 24.2L32.6 18" stroke="#0F8276" stroke-width="2"/>
-  <path d="M22 24.2V36" stroke="#0F8276" stroke-width="2"/>
-  <text x="52" y="32" fill="white" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700">StockCerdas</text>
-</svg>

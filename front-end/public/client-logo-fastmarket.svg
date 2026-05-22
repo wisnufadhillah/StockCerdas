@@ -1,9 +1,0 @@
-<svg width="220" height="118" viewBox="0 0 220 118" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M53 62h78l14-51H69L53 62Z" fill="#244B9B"/>
-  <path d="M67 62c22-23 43-36 76-42" stroke="#28C76F" stroke-width="11"/>
-  <circle cx="85" cy="74" r="10" fill="#263241"/>
-  <circle cx="127" cy="74" r="10" fill="#263241"/>
-  <path d="M28 73c16-12 26-12 42 0" stroke="#25A9E0" stroke-width="9" stroke-linecap="round"/>
-  <text x="18" y="101" fill="#FF1F8A" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900" font-style="italic">FAST</text>
-  <text x="90" y="101" fill="#92D829" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900" font-style="italic">MARKET</text>
-</svg>

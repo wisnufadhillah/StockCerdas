@@ -1,8 +1,0 @@
-<svg width="220" height="118" viewBox="0 0 220 118" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M23 41h73l-10 37H35L23 41Z" stroke="#DB7B2E" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M26 52h67" stroke="#8DD3D1" stroke-width="4"/>
-  <circle cx="43" cy="85" r="6" fill="#263241"/>
-  <circle cx="81" cy="85" r="6" fill="#263241"/>
-  <text x="105" y="62" fill="#263241" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900" font-style="italic">Smart</text>
-  <text x="105" y="90" fill="#FFD43B" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700">Shopping</text>
-</svg>
