@@ -1,0 +1,5 @@
+*.keras
+*.pb
+variables/
+logs/
+__pycache__/
