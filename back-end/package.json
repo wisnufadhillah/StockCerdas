@@ -1,0 +1,22 @@
+{
+  "name": "stockcerdas-backend",
+  "version": "1.0.0",
+  "description": "RESTful API StockCerdas untuk inventaris, transaksi, pengguna UMKM, dan prediksi restock.",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:init": "node src/db/init.js",
+    "db:migrate": "node src/db/migrate.js",
+    "db:tables": "node src/db/list-tables.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "morgan": "^1.10.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {}
+}
