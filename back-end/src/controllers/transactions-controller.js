@@ -1,14 +1,9 @@
 const { pool } = require("../db/pool");
 
 async function getTransactions(req, res) {
-  const { store_id, tenant_id } = req.query;
+  const { tenant_id } = req.query;
   const params = [];
   const filters = [];
-
-  if (store_id && store_id !== "undefined") {
-    params.push(store_id);
-    filters.push(`st.store_id = $${params.length}`);
-  }
 
   if (tenant_id && tenant_id !== "undefined") {
     params.push(tenant_id);
@@ -18,7 +13,7 @@ async function getTransactions(req, res) {
   const filter = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
   const result = await pool.query(
-    `SELECT st.id, st.store_id, st.product_id, p.sku, p.name AS product_name, st.transaction_type,
+    `SELECT st.id, st.product_id, p.sku, p.name AS product_name, st.transaction_type,
             st.quantity, st.transaction_date, st.note, st.created_at
      FROM stock_transactions st
      JOIN products p ON p.id = st.product_id
@@ -31,12 +26,12 @@ async function getTransactions(req, res) {
 }
 
 async function createTransaction(req, res) {
-  const { product_id, store_id, transaction_type, quantity, transaction_date, note } = req.body;
+  const { product_id, transaction_type, quantity, transaction_date, note } = req.body;
 
-  if (!product_id || !store_id || !["in", "out"].includes(transaction_type) || !quantity) {
+  if (!product_id || !["in", "out"].includes(transaction_type) || !quantity) {
     res.status(400).json({
       status: "fail",
-      message: "product_id, store_id, transaction_type ('in' atau 'out'), dan quantity wajib diisi",
+      message: "product_id, transaction_type ('in' atau 'out'), dan quantity wajib diisi",
     });
     return;
   }
@@ -47,10 +42,10 @@ async function createTransaction(req, res) {
     await client.query("BEGIN");
 
     const transaction = await client.query(
-      `INSERT INTO stock_transactions (product_id, store_id, transaction_type, quantity, transaction_date, note)
-       VALUES ($1, $2, $3, $4, COALESCE($5, CURRENT_DATE), $6)
+      `INSERT INTO stock_transactions (product_id, transaction_type, quantity, transaction_date, note)
+       VALUES ($1, $2, $3, COALESCE($4, CURRENT_DATE), $5)
        RETURNING *`,
-      [product_id, store_id, transaction_type, quantity, transaction_date, note]
+      [product_id, transaction_type, quantity, transaction_date, note]
     );
 
     const stockDelta = transaction_type === "in" ? quantity : -quantity;

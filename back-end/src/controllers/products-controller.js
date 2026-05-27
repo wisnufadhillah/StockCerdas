@@ -1,14 +1,9 @@
 const { pool } = require("../db/pool");
 
 async function getProducts(req, res) {
-  const { category, status, search, store_id, tenant_id } = req.query;
+  const { category, status, search, tenant_id } = req.query;
   const params = [];
   const filters = [];
-
-  if (store_id && store_id !== "undefined") {
-    params.push(store_id);
-    filters.push(`store_id = $${params.length}`);
-  }
 
   if (tenant_id && tenant_id !== "undefined") {
     params.push(tenant_id);

@@ -57,10 +57,10 @@ async function uploadData(req, res) {
           for (const [pName, data] of Object.entries(productMap)) {
             const sku = `IMP-${Math.floor(Math.random()*10000)}-${pName.substring(0,3).toUpperCase()}`;
             await pool.query(
-              `INSERT INTO products (tenant_id, store_id, sku, name, category, price, current_stock, minimum_stock)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              `INSERT INTO products (tenant_id, sku, name, price, current_stock, minimum_stock)
+               VALUES ($1, $2, $3, $4, $5, $6)
                ON CONFLICT (sku) DO NOTHING`,
-              [targetTenant, store_id, sku, pName, "Imported", data.price, data.stock, 20]
+              [targetTenant, sku, pName, data.price, data.stock, 20]
             );
             parsedProducts++;
           }

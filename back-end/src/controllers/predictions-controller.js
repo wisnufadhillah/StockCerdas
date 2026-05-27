@@ -14,29 +14,37 @@ function calculateRisk(currentStock, predictedDemand) {
 }
 
 function buildFallbackFeatureVector(product, forecastPeriod) {
-  const periodDays = forecastPeriod === "30_days" ? 30 : forecastPeriod === "14_days" ? 14 : 7;
   const currentStock = Number(product.current_stock || 0);
+  const price = Number(product.price || 15000);
+  const minStock = Number(product.minimum_stock || 10);
+  const month = new Date().getMonth() + 1;
+
+  // AI Model expects MONTHLY data (retail_feature_engineered.csv)
+  // Simulate realistic monthly sales based on current stock
+  const monthlySalesEstimate = Math.max(30, currentStock * 3 + 10);
+  const totalSales = price * monthlySalesEstimate; 
+  const lag1 = monthlySalesEstimate;
 
   return [
-    currentStock,
-    periodDays,
-    currentStock <= 0 ? 1 : 0,
-    currentStock < 10 ? 1 : 0,
-    Math.max(currentStock, 0),
-    Math.max(currentStock / Math.max(periodDays, 1), 0),
-    periodDays === 7 ? 1 : 0,
-    periodDays === 14 ? 1 : 0,
-    periodDays === 30 ? 1 : 0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
+    totalSales, // 1. Total_Sales
+    price,      // 2. Avg_Sales
+    0,          // 3. Discount_Rate
+    2021,       // 4. Year (Locked to 2021 to prevent Neural Network blowout from unseen years)
+    month,      // 5. Month
+    Math.ceil(month / 3), // 6. Quarter
+    lag1,       // 7. Lag_1
+    lag1 * 0.9, // 8. Lag_2
+    lag1 * 1.1, // 9. Lag_3
+    lag1,       // 10. Rolling_Mean_3
+    lag1,       // 11. Rolling_Mean_6
+    minStock,   // 12. Safety_Stock
+    minStock * 2, // 13. Reorder_Point
+    currentStock + lag1, // 14. Stok_Awal
+    currentStock, // 15. Stok_Akhir
+    0,          // 16. Sales_Growth
+    product.id % 50, // 17. Product_Encoded
+    Math.sin((month * 2 * Math.PI) / 12), // 18. Month_Sin
+    Math.cos((month * 2 * Math.PI) / 12)  // 19. Month_Cos
   ];
 }
 
@@ -48,7 +56,7 @@ async function createPrediction(req, res) {
     return;
   }
 
-  const productResult = await pool.query("SELECT id, name, current_stock FROM products WHERE id = $1", [product_id]);
+  const productResult = await pool.query("SELECT id, name, current_stock, price, minimum_stock FROM products WHERE id = $1", [product_id]);
 
   if (!productResult.rowCount) {
     res.status(404).json({ status: "fail", message: "Produk tidak ditemukan" });
@@ -71,7 +79,17 @@ async function createPrediction(req, res) {
   }
 
   if (typeof aiRawResponse?.prediction_quantity === "number") {
-    predictedDemand = Math.max(1, Math.round(aiRawResponse.prediction_quantity));
+    // Model output is always a 30-day (1 month) prediction
+    let monthlyPred = Math.max(1, Math.round(aiRawResponse.prediction_quantity));
+    
+    // Scale down to requested forecast_period
+    if (normalizedPeriod === "7_days") {
+      predictedDemand = Math.max(1, Math.round(monthlyPred * (7 / 30)));
+    } else if (normalizedPeriod === "14_days") {
+      predictedDemand = Math.max(1, Math.round(monthlyPred * (14 / 30)));
+    } else {
+      predictedDemand = monthlyPred;
+    }
   } else {
     const fallbackBase = forecast_period === "30_days" ? 52 : forecast_period === "14_days" ? 32 : 18;
     predictedDemand = Math.max(fallbackBase, Number(product.current_stock) + 8);

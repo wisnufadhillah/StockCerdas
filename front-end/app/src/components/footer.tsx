@@ -50,7 +50,7 @@ export function Footer() {
         <div>
           <h3 className="text-base font-extrabold">Kontak</h3>
           <ul className="mt-5 space-y-4 text-base font-medium">
-            <li>admin@stockcerdas.id</li>
+            <li>superadmin@gmail.com</li>
             <li>+62 857 1204 0161</li>
             <li>Yogyakarta, Indonesia</li>
           </ul>

@@ -247,7 +247,7 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
       }
     }
     loadData();
-  }, [activeStoreId, tenantId]);
+  }, [activeStoreId, tenantId, stores]);
 
   if (loading) return <LoadingSpinner />;
 
@@ -645,6 +645,7 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
   const [data, setData] = useState<any>(null);
   const [optionsData, setOptionsData] = useState<any[]>([]);
   const [loading, setLoading] = useState(action === "edit" || action === "detail" || action === "hapus");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<string>("free");
 
@@ -722,12 +723,15 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     setError(null);
     const formData = new FormData(e.currentTarget);
     const payload = Object.fromEntries(formData.entries());
 
-    if (view === "forecasting" && payload.forecast_period === "pro_only") {
-       setError("Prediksi 30 Hari khusus untuk Paket Pro. Silakan upgrade paket Anda.");
+    if (view === "forecasting" && String(payload.forecast_period).startsWith("pro_only")) {
+       setError("Prediksi 14 Hari dan 30 Hari khusus untuk Paket Pro. Silakan upgrade paket Anda.");
+       setIsSubmitting(false);
        return;
     }
 
@@ -777,6 +781,7 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
       router.refresh();
     } catch (err: any) {
       setError(err.message);
+      setIsSubmitting(false);
     }
   };
 
@@ -811,8 +816,10 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
           <p className="text-lg font-extrabold text-[#b42318]">Konfirmasi hapus data</p>
           {error && <div className="mt-2 text-sm text-red-700">{error}</div>}
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link href={backHref} className="rounded-lg border border-[#cfd6df] bg-white px-4 py-2 text-sm font-extrabold text-[#334155]">Batal</Link>
-            <button onClick={handleDelete} className="rounded-lg bg-[#b42318] px-4 py-2 text-sm font-extrabold text-white">Hapus</button>
+          <Link href={backHref} className={`rounded-lg border border-[#cfd6df] bg-white px-4 py-2 font-extrabold text-[#334155] ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>Batal</Link>
+          <button onClick={handleDelete} disabled={isSubmitting} className={`rounded-lg bg-[#b42318] px-4 py-2 font-extrabold text-white transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            {isSubmitting ? 'Menghapus...' : 'Hapus'}
+          </button>
           </div>
         </div>
       </Panel>
@@ -850,7 +857,7 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
     if (plan === "pro") {
       forecastOptions.push({value: "14_days", label: "14 Hari"}, {value: "30_days", label: "30 Hari"});
     } else {
-      forecastOptions.push({value: "pro_only", label: "30 Hari (Khusus Pro)"});
+      forecastOptions.push({value: "pro_only_14", label: "14 Hari (Khusus Pro)"}, {value: "pro_only_30", label: "30 Hari (Khusus Pro)"});
     }
 
     fields = [
@@ -872,7 +879,13 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
   return (
     <Panel title={`${action === "tambah" ? "Tambah" : "Edit"} ${view}`} action="Kembali" actionHref={backHref}>
       {error && <div className="mb-4 rounded border border-red-400 bg-red-100 p-3 text-red-700">{error}</div>}
-      <form onSubmit={handleSubmit} className="grid gap-4">
+      {isSubmitting && view === "forecasting" && (
+        <div className="mb-4 rounded border border-[#0f8276] bg-[#0f8276]/10 p-4 text-[#0f8276] font-medium flex items-center gap-3">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#0f8276] border-t-transparent"></div>
+          AI sedang menganalisis data Anda. Tunggu sebentar...
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="grid gap-5">
         {fields.map((f) => (
           <label key={f.name} className="grid gap-2">
             <span className="text-xs font-bold uppercase text-[#657181]">{f.label}</span>
@@ -900,8 +913,8 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
           </label>
         ))}
         <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
-          <button type="submit" className="rounded-lg bg-[#0f8276] px-4 py-2 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]">
-            Simpan
+          <button type="submit" disabled={isSubmitting} className={`rounded-lg bg-[#0f8276] px-4 py-2 text-sm font-extrabold text-white transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#0b6f66]'}`}>
+            {isSubmitting ? 'Memproses...' : 'Simpan'}
           </button>
         </div>
       </form>
