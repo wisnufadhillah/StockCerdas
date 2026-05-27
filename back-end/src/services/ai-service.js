@@ -16,7 +16,13 @@ async function requestAiPrediction(features) {
     throw new Error(`AI service error ${response.status}: ${text}`);
   }
 
-  return response.json();
+  const data = await response.json();
+
+  if (typeof data.prediction_quantity !== "number") {
+    throw new Error("AI service response missing prediction_quantity");
+  }
+
+  return data;
 }
 
 module.exports = { requestAiPrediction };

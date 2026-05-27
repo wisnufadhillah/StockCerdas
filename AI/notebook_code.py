@@ -2,12 +2,16 @@
 
 import os
 import datetime
+import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import joblib
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
 from tensorflow.keras.layers import Input, Dense, BatchNormalization, Dropout
 from tensorflow.keras.models import Model
@@ -53,6 +57,10 @@ target_column = 'Qty_Sold'
 X = df.drop(columns=[target_column])
 y = df[target_column]
 
+feature_columns = X.columns.tolist()
+with open(os.path.join(ARTIFACTS_DIR, "feature_columns.json"), "w", encoding="utf-8") as f:
+    json.dump(feature_columns, f, indent=2)
+
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
@@ -66,6 +74,9 @@ X_test = x_scaler.transform(X_test)
 y_scaler = StandardScaler()
 y_train_scaled = y_scaler.fit_transform(y_train.values.reshape(-1, 1))
 y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1))
+
+joblib.dump(x_scaler, os.path.join(ARTIFACTS_DIR, "x_scaler.joblib"))
+joblib.dump(y_scaler, os.path.join(ARTIFACTS_DIR, "y_scaler.joblib"))
 
 # Konversi ke float32 agar kompatibel
 X_train = X_train.astype(np.float32)
@@ -221,6 +232,22 @@ print(f"R2 Score (Akurasi Regresi): {r2 * 100:.2f}%")
 print(f"MAE (Original Qty)      : {mae_real:.2f} unit")
 print(f"RMSE (Original Qty)     : {rmse_real:.2f} unit")
 
+evaluation_report = {
+    "mae_scaled": float(mae_scaled),
+    "mae_original_qty": float(mae_real),
+    "rmse_original_qty": float(rmse_real),
+    "r2_score": float(r2),
+    "r2_percent": float(r2 * 100),
+    "meets_r2_85_percent": bool(r2 >= 0.85),
+    "meets_mae_scaled_0_02": bool(mae_scaled <= 0.02),
+    "target_column": target_column,
+    "feature_count": len(feature_columns),
+    "feature_columns": feature_columns,
+}
+
+with open(os.path.join(ARTIFACTS_DIR, "evaluation_report.json"), "w", encoding="utf-8") as f:
+    json.dump(evaluation_report, f, indent=2)
+
 # VISUALIZATION
 
 plt.figure(figsize=(12, 5))
@@ -279,66 +306,8 @@ try:
 except Exception as e:
     print(f"[NOTE] SDK Generative AI terkonfigurasi. Pastikan API Key di-set untuk eksekusi live.")
 
-# DEPLOYMENT READY: FASTAPI CODE GENERATION
-
-fastapi_code = """
-import numpy as np
-import tensorflow as tf
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import joblib
-
-app = FastAPI(title="Retail Demand Forecasting API", version="1.0")
-
-# Input Schema disesuaikan dengan dimensi data X (misal data memiliki 18 fitur setelah engineering)
-class InferenceRequest(BaseModel):
-    features: list # List bertipe float dengan panjang sesuai jumlah kolom fitur X
-
-# Load Model dengan custom_objects
-try:
-    model = tf.keras.models.load_model(
-        "retail_prediction_model.keras",
-        custom_objects={"CustomActivationLayer": CustomActivationLayer if 'CustomActivationLayer' in globals() else None, "custom_loss": custom_loss}
-    )
-except Exception:
-    # Fallback jika di luar environment notebook utama
-    @tf.keras.utils.register_keras_serializable()
-    class CustomActivationLayer(tf.keras.layers.Layer):
-        def call(self, inputs): return tf.nn.swish(inputs)
-
-    @tf.keras.utils.register_keras_serializable()
-    def custom_loss(y_true, y_pred): return tf.reduce_mean(tf.abs(y_true - y_pred))
-
-    model = tf.keras.models.load_model(
-        "retail_prediction_model.keras",
-        custom_objects={"CustomActivationLayer": CustomActivationLayer, "custom_loss": custom_loss}
-    )
-
-@app.get("/")
-def home():
-    return {"status": "API is Running", "model": "Retail_Optimization_Model"}
-
-@app.post("/predict")
-def predict(request: InferenceRequest):
-    try:
-        input_data = np.array([request.features], dtype=np.float32)
-        prediction_scaled = model.predict(input_data)
-
-        # Catatan: Di produksi, pastikan membawa file y_scaler.bin untuk inverse_transform.
-        # Output di bawah ini mengembalikan hasil prediksi dalam bentuk float mentah.
-        return {
-            "prediction_scaled": float(prediction_scaled[0][0]),
-            "message": "Gunakan y_scaler inversi untuk mengembalikan nilai asli kuantitas unit."
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-"""
-
-with open(os.path.join(BASE_DIR, "app.py"), "w") as f:
-    f.write(fastapi_code)
-
 print("\n===== FASTAPI COMPONENT DEPLOYMENT =====")
-print("[SUCCESS] File 'app.py' berisi framework REST API FastAPI mandiri berhasil di-generate!")
+print("[INFO] File 'app.py' menyediakan REST API FastAPI mandiri untuk inference model.")
 print("Untuk menjalankan API, gunakan command: uvicorn app:app --reload")
 
 # TENSORBOARD INSTRUCTION

@@ -1,5 +1,12 @@
-*.keras
-*.pb
-variables/
-logs/
 __pycache__/
+*.pyc
+best_model_weights.weights.h5
+
+# Keep production model artifacts in the final repository for assessment.
+!retail_prediction_model.keras
+!saved_model_prod/
+!saved_model_prod/**
+!logs/
+!logs/**
+!artifacts/
+!artifacts/**

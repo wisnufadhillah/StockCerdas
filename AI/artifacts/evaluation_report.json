@@ -1,0 +1,32 @@
+{
+  "mae_scaled": 0.05232628946641128,
+  "mae_original_qty": 5.0914435386657715,
+  "rmse_original_qty": 8.532269874507357,
+  "r2_score": 0.9915575385093689,
+  "r2_percent": 99.15575385093689,
+  "meets_r2_85_percent": true,
+  "meets_mae_scaled_0_02": false,
+  "target_column": "Qty_Sold",
+  "feature_count": 19,
+  "feature_columns": [
+    "Total_Sales",
+    "Avg_Sales",
+    "Discount_Rate",
+    "Year",
+    "Month",
+    "Quarter",
+    "Lag_1",
+    "Lag_2",
+    "Lag_3",
+    "Rolling_Mean_3",
+    "Rolling_Mean_6",
+    "Safety_Stock",
+    "Reorder_Point",
+    "Stok_Awal",
+    "Stok_Akhir",
+    "Sales_Growth",
+    "Product_Encoded",
+    "Month_Sin",
+    "Month_Cos"
+  ]
+}
