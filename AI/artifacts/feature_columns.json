@@ -1,0 +1,21 @@
+[
+  "Total_Sales",
+  "Avg_Sales",
+  "Discount_Rate",
+  "Year",
+  "Month",
+  "Quarter",
+  "Lag_1",
+  "Lag_2",
+  "Lag_3",
+  "Rolling_Mean_3",
+  "Rolling_Mean_6",
+  "Safety_Stock",
+  "Reorder_Point",
+  "Stok_Awal",
+  "Stok_Akhir",
+  "Sales_Growth",
+  "Product_Encoded",
+  "Month_Sin",
+  "Month_Cos"
+]

@@ -34,7 +34,14 @@ npm run dev
 
 ## Integrasi AI
 
-Folder `../AI/app.py` menyediakan FastAPI dengan endpoint `POST /predict`.
+Folder `../AI` menyediakan model TensorFlow dan FastAPI inference service.
+
+Artefak wajib sebelum menjalankan service:
+
+- `../AI/retail_prediction_model.keras`
+- `../AI/artifacts/x_scaler.joblib`
+- `../AI/artifacts/y_scaler.joblib`
+- `../AI/artifacts/feature_columns.json`
 
 Jalankan service AI dari folder `AI`:
 
@@ -42,7 +49,9 @@ Jalankan service AI dari folder `AI`:
 uvicorn app:app --reload --port 8000
 ```
 
-Backend Express akan memanggil `AI_SERVICE_URL/predict` saat endpoint `POST /api/predictions` menerima field `features`.
+Backend Express akan memanggil `AI_SERVICE_URL/predict` saat endpoint `POST /api/predictions` dibuat. AI service mengembalikan `prediction_quantity` dalam unit asli, bukan angka scaled.
+
+Generative AI bersifat fitur sekunder. Jika `OPENROUTER_API_KEY` tersedia, backend dapat membuat rekomendasi restock berbasis hasil prediksi memakai model `openai/gpt-oss-120b:free`. Jika key tidak tersedia, prediksi stok tetap berjalan tanpa rekomendasi teks.
 
 ## Endpoint Utama
 

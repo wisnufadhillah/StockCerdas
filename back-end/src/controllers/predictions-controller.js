@@ -1,5 +1,6 @@
 const { pool } = require("../db/pool");
 const { requestAiPrediction } = require("../services/ai-service");
+const { generateRestockRecommendation } = require("../services/generative-ai-service");
 
 function normalizePeriod(period) {
   const allowed = new Set(["7_days", "14_days", "30_days"]);
@@ -10,6 +11,33 @@ function calculateRisk(currentStock, predictedDemand) {
   if (currentStock <= 0 || currentStock < predictedDemand * 0.4) return "high";
   if (currentStock < predictedDemand) return "medium";
   return "low";
+}
+
+function buildFallbackFeatureVector(product, forecastPeriod) {
+  const periodDays = forecastPeriod === "30_days" ? 30 : forecastPeriod === "14_days" ? 14 : 7;
+  const currentStock = Number(product.current_stock || 0);
+
+  return [
+    currentStock,
+    periodDays,
+    currentStock <= 0 ? 1 : 0,
+    currentStock < 10 ? 1 : 0,
+    Math.max(currentStock, 0),
+    Math.max(currentStock / Math.max(periodDays, 1), 0),
+    periodDays === 7 ? 1 : 0,
+    periodDays === 14 ? 1 : 0,
+    periodDays === 30 ? 1 : 0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+  ];
 }
 
 async function createPrediction(req, res) {
@@ -30,15 +58,20 @@ async function createPrediction(req, res) {
   const product = productResult.rows[0];
   let aiRawResponse = null;
   let predictedDemand;
+  const normalizedPeriod = normalizePeriod(forecast_period);
 
   try {
-    aiRawResponse = await requestAiPrediction(features);
+    const aiFeatures = Array.isArray(features) && features.length > 0
+      ? features
+      : buildFallbackFeatureVector(product, normalizedPeriod);
+
+    aiRawResponse = await requestAiPrediction(aiFeatures);
   } catch (error) {
     aiRawResponse = { warning: error.message };
   }
 
-  if (aiRawResponse?.prediction_scaled !== undefined) {
-    predictedDemand = Math.max(1, Math.round(Number(aiRawResponse.prediction_scaled) * 100));
+  if (typeof aiRawResponse?.prediction_quantity === "number") {
+    predictedDemand = Math.max(1, Math.round(aiRawResponse.prediction_quantity));
   } else {
     const fallbackBase = forecast_period === "30_days" ? 52 : forecast_period === "14_days" ? 32 : 18;
     predictedDemand = Math.max(fallbackBase, Number(product.current_stock) + 8);
@@ -47,24 +80,37 @@ async function createPrediction(req, res) {
   const currentStock = Number(product.current_stock);
   const recommendedRestock = Math.max(predictedDemand - currentStock, 0);
   const riskLevel = calculateRisk(currentStock, predictedDemand);
-  const normalizedPeriod = normalizePeriod(forecast_period);
+  let generativeRecommendation = null;
 
-  const { store_id } = req.body;
-  
+  try {
+    generativeRecommendation = await generateRestockRecommendation({
+      productName: product.name,
+      currentStock,
+      predictedDemand,
+      recommendedRestock,
+      riskLevel,
+      forecastPeriod: normalizedPeriod,
+    });
+  } catch (error) {
+    generativeRecommendation = null;
+  }
+
   const result = await pool.query(
     `INSERT INTO predictions
-      (product_id, store_id, forecast_period, predicted_demand, current_stock, recommended_restock, risk_level, ai_raw_response)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      (product_id, forecast_period, predicted_demand, current_stock, recommended_restock, risk_level, ai_raw_response)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
     [
       product_id,
-      store_id,
       normalizedPeriod,
       predictedDemand,
       currentStock,
       recommendedRestock,
       riskLevel,
-      aiRawResponse || { mode: "fallback" },
+      {
+        ...(aiRawResponse || { mode: "fallback" }),
+        generative_recommendation: generativeRecommendation,
+      },
     ]
   );
 
@@ -78,20 +124,16 @@ async function createPrediction(req, res) {
       current_stock: currentStock,
       recommended_restock: recommendedRestock,
       risk_level: riskLevel,
+      generative_recommendation: generativeRecommendation,
       prediction: result.rows[0],
     },
   });
 }
 
 async function getPredictions(req, res) {
-  const { store_id, tenant_id } = req.query;
+  const { tenant_id } = req.query;
   const params = [];
   const filters = [];
-
-  if (store_id && store_id !== "undefined") {
-    params.push(store_id);
-    filters.push(`pr.store_id = $${params.length}`);
-  }
 
   if (tenant_id && tenant_id !== "undefined") {
     params.push(tenant_id);
