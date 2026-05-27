@@ -118,25 +118,25 @@ export function DashboardShell({ role, view = "dashboard", action }: { role: Das
         </aside>
         <section className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-[#d5dbe3] bg-white/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-bold text-[#0f8276]">{page.eyebrow}</p>
                 <h1 className="mt-1 text-2xl font-extrabold leading-tight text-[#172033] sm:text-3xl">{page.title}</h1>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <SessionProfile compact />
-                <button className="inline-flex h-[38px] items-center justify-center rounded-lg border border-[#cfd6df] bg-white px-4 text-sm font-extrabold text-[#334155] transition hover:border-[#0f8276] hover:text-[#0f8276]">30 Hari</button>
+                <div className="hidden sm:block"><SessionProfile compact /></div>
+                <button className="hidden sm:inline-flex h-[38px] items-center justify-center rounded-lg border border-[#cfd6df] bg-white px-4 text-sm font-extrabold text-[#334155] transition hover:border-[#0f8276] hover:text-[#0f8276]">30 Hari</button>
                 <Link href={page.ctaHref ?? "#"} className="inline-flex h-[38px] items-center justify-center rounded-lg border border-transparent bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]">{page.cta}</Link>
                 <LogoutButton compact />
               </div>
             </div>
-            <nav className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            <nav className="mt-4 flex gap-2 overflow-x-auto pb-2 lg:hidden scrollbar-hide">
               {navItems.map((item) => (
                 <Link key={item.href} href={item.href} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-extrabold ${item.view === view ? "bg-[#0f8276] text-white" : "bg-[#eef1f4] text-[#526072]"}`}>{item.label}</Link>
               ))}
             </nav>
           </header>
-          <div className="w-full px-4 pb-24 pt-6 sm:px-6 lg:px-8">
+          <div className="w-full px-4 pb-12 pt-6 sm:px-6 lg:px-8">
             {action ? (
               <ActionPage role={role} view={view} action={action} />
             ) : isSuperAdmin ? (
@@ -145,7 +145,6 @@ export function DashboardShell({ role, view = "dashboard", action }: { role: Das
               <UserAdminContent view={view as UserAdminView} />
             )}
           </div>
-          <MobileBottomNav navItems={navItems} view={view} />
         </section>
       </div>
     </main>
@@ -1141,14 +1140,4 @@ function StatusBadge({ status }: { status: string }) {
       : "bg-[#edf8f6] text-[#0f8276]";
 
   return <span className={`rounded-md px-2 py-1 text-xs font-extrabold ${className}`}>{status}</span>;
-}
-
-function MobileBottomNav({ navItems, view }: { navItems: NavItem[]; view: DashboardView }) {
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-[#d5dbe3] bg-white px-2 py-2 shadow-[0_-10px_28px_rgba(17,24,39,0.1)] lg:hidden">
-      {navItems.slice(0, 4).map((item) => (
-        <Link key={item.href} href={item.href} className={`rounded-lg px-2 py-2 text-center text-[11px] font-extrabold ${item.view === view ? "bg-[#0f8276] text-white" : "text-[#526072] hover:bg-[#edf8f6] hover:text-[#0f8276]"}`}>{item.label}</Link>
-      ))}
-    </nav>
-  );
 }
