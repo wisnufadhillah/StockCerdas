@@ -1,0 +1,368 @@
+openapi: 3.0.0
+info:
+  title: StockCerdas API
+  description: RESTful API untuk platform SaaS Manajemen Inventaris berbasis Kecerdasan Buatan.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Base URL
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Pesan error
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        store_id:
+          type: integer
+          nullable: true
+        sku:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        price:
+          type: string
+        current_stock:
+          type: integer
+        minimum_stock:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        store_id:
+          type: integer
+          nullable: true
+        product_id:
+          type: integer
+        type:
+          type: string
+          enum: [in, out]
+        quantity:
+          type: integer
+        date:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Prediction:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        store_id:
+          type: integer
+          nullable: true
+        product_id:
+          type: integer
+        predicted_demand:
+          type: integer
+        period_days:
+          type: integer
+        recommendation:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+paths:
+  /auth/login:
+    post:
+      summary: Login pengguna
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: useradmin@gmail.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Berhasil login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  token:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      role:
+                        type: string
+        '401':
+          description: Kredensial tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /products:
+    get:
+      summary: Ambil daftar produk
+      parameters:
+        - name: tenant_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: store_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar produk berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '500':
+          description: Kesalahan server internal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /transactions:
+    get:
+      summary: Ambil daftar transaksi
+      parameters:
+        - name: tenant_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar transaksi berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+        '500':
+          description: Kesalahan server internal
+    post:
+      summary: Catat transaksi baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenant_id:
+                  type: integer
+                store_id:
+                  type: integer
+                product_id:
+                  type: integer
+                type:
+                  type: string
+                  enum: [in, out]
+                quantity:
+                  type: integer
+      responses:
+        '201':
+          description: Transaksi berhasil dicatat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    $ref: '#/components/schemas/Transaction'
+        '400':
+          description: Data input tidak lengkap atau salah
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /predictions:
+    get:
+      summary: Ambil daftar hasil AI Forecasting
+      parameters:
+        - name: tenant_id
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: store_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar hasil prediksi AI
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Prediction'
+    post:
+      summary: Generate prediksi AI baru (Inference)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenant_id:
+                  type: integer
+                  example: 4
+                store_id:
+                  type: integer
+                  example: 5
+                period_days:
+                  type: integer
+                  enum: [7, 14, 30]
+                  example: 14
+      responses:
+        '201':
+          description: Prediksi berhasil di-generate dari ML dan GenAI
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: Prediksi AI berhasil dibuat
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Prediction'
+        '500':
+          description: Gagal menghubungi server AI Model atau OpenRouter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /stores:
+    get:
+      summary: Ambil daftar cabang (store)
+      parameters:
+        - name: tenant_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar cabang
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        location:
+                          type: string
+  /categories:
+    get:
+      summary: Ambil daftar kategori produk
+      parameters:
+        - name: tenant_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Daftar kategori
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: string
+                      example: Minuman
