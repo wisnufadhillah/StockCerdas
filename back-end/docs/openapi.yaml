@@ -13,7 +13,7 @@ components:
       properties:
         status:
           type: string
-          example: error
+          example: fail
         message:
           type: string
           example: Pesan error
@@ -95,6 +95,22 @@ components:
         updated_at:
           type: string
           format: date-time
+    Store:
+      type: object
+      properties:
+        id:
+          type: integer
+        tenant_id:
+          type: integer
+        store_name:
+          type: string
+        location:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
 paths:
   /auth/login:
     post:
@@ -123,17 +139,88 @@ paths:
                   status:
                     type: string
                     example: success
-                  token:
-                    type: string
-                  user:
+                  data:
                     type: object
                     properties:
                       id:
                         type: integer
+                      tenant_id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
                       role:
+                        type: string
+                      business_name:
+                        type: string
+                      plan:
                         type: string
         '401':
           description: Kredensial tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/register:
+    post:
+      summary: Pendaftaran akun baru (Register)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  example: "Budi Santoso"
+                businessName:
+                  type: string
+                  example: "Toko Budi Maju"
+                email:
+                  type: string
+                  example: "budi@gmail.com"
+                password:
+                  type: string
+                  example: "rahasia123"
+                businessType:
+                  type: string
+                  example: "Retail"
+      responses:
+        '201':
+          description: Berhasil mendaftar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      tenant_id:
+                        type: integer
+                      name:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                      business_name:
+                        type: string
+        '400':
+          description: Data tidak lengkap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email sudah terdaftar
           content:
             application/json:
               schema:
@@ -167,12 +254,6 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
-        '500':
-          description: Kesalahan server internal
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /transactions:
     get:
       summary: Ambil daftar transaksi
@@ -197,8 +278,6 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Transaction'
-        '500':
-          description: Kesalahan server internal
     post:
       summary: Catat transaksi baru
       requestBody:
@@ -232,12 +311,6 @@ paths:
                     example: success
                   data:
                     $ref: '#/components/schemas/Transaction'
-        '400':
-          description: Data input tidak lengkap atau salah
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /predictions:
     get:
       summary: Ambil daftar hasil AI Forecasting
@@ -304,12 +377,6 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Prediction'
-        '500':
-          description: Gagal menghubungi server AI Model atau OpenRouter
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
   /stores:
     get:
       summary: Ambil daftar cabang (store)
@@ -333,21 +400,14 @@ paths:
                   data:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        name:
-                          type: string
-                        location:
-                          type: string
+                      $ref: '#/components/schemas/Store'
   /categories:
     get:
       summary: Ambil daftar kategori produk
       parameters:
         - name: tenant_id
           in: query
-          required: true
+          required: false
           schema:
             type: integer
       responses:
@@ -365,4 +425,4 @@ paths:
                     type: array
                     items:
                       type: string
-                      example: Minuman
+                      example: Imported
