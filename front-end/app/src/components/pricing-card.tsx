@@ -35,8 +35,8 @@ export function PricingCard({
     <article
       className={
         highlighted
-          ? "relative flex min-h-[600px] w-full max-w-[410px] flex-col rounded-xl bg-[#0f8276] px-7 py-10 text-white shadow-sm sm:min-h-[675px] sm:px-11 sm:py-12"
-          : "flex min-h-[600px] w-full max-w-[410px] flex-col rounded-xl border border-[#d8dde5] bg-[#f4f5f7] px-7 py-10 text-[#1d2433] shadow-sm sm:min-h-[675px] sm:px-11 sm:py-12"
+          ? "relative flex min-h-[600px] w-full max-w-[410px] flex-col rounded-xl bg-[#0f8276] px-7 py-10 text-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl sm:min-h-[675px] sm:px-11 sm:py-12"
+          : "flex min-h-[600px] w-full max-w-[410px] flex-col rounded-xl border border-[#d8dde5] bg-[#f4f5f7] px-7 py-10 text-[#1d2433] shadow-sm transition duration-300 hover:-translate-y-1 hover:border-[#0f8276]/40 hover:shadow-xl sm:min-h-[675px] sm:px-11 sm:py-12"
       }
     >
       {badge ? (
@@ -50,8 +50,8 @@ export function PricingCard({
         <p
           className={
             highlighted
-              ? "mx-auto mt-3 max-w-[315px] text-base font-medium leading-6 text-white/95"
-              : "mx-auto mt-3 max-w-[315px] text-base font-medium leading-6 text-[#657181]"
+              ? "mx-auto mt-3 min-h-[48px] max-w-[315px] text-base font-medium leading-6 text-white/95 sm:min-h-[72px]"
+              : "mx-auto mt-3 min-h-[48px] max-w-[315px] text-base font-medium leading-6 text-[#657181] sm:min-h-[72px]"
           }
         >
           {description}
@@ -64,7 +64,7 @@ export function PricingCard({
         </div>
       </div>
 
-      <ul className="mt-10 space-y-5 sm:mt-12 sm:space-y-6">
+      <ul className="mt-10 space-y-5 sm:mt-12 sm:space-y-5">
         {features.map((feature) => (
           <li
             key={feature.label}
@@ -93,7 +93,7 @@ export function PricingCard({
       </ul>
 
       <div className="mt-auto flex justify-center pt-10">
-        <ButtonLink href="/register" variant={highlighted ? "light" : "primary"}>
+        <ButtonLink href="/register" variant={highlighted ? "light" : "primary"} size="large">
           Mulai Gratis
         </ButtonLink>
       </div>

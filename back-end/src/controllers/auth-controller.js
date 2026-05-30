@@ -10,7 +10,7 @@ async function login(req, res) {
   }
 
   const result = await pool.query(
-    `SELECT u.id, u.tenant_id, u.full_name, u.email, u.role, u.status, t.business_name, t.plan
+    `SELECT u.id, u.tenant_id, u.full_name, u.email, u.role, u.status, t.business_name, t.plan, t.profile_image_url
      FROM users u
      LEFT JOIN tenants t ON t.id = u.tenant_id
      WHERE LOWER(u.email) = $1 AND u.password = $2
@@ -41,6 +41,7 @@ async function login(req, res) {
       email: user.email,
       role: user.role,
       business_name: user.business_name,
+      profile_image_url: user.profile_image_url,
       plan: user.plan || "free",
     },
   });

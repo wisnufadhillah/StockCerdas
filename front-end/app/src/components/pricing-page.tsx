@@ -23,9 +23,9 @@ const proFeatures = [
   { label: "Import CSV/XLSX + sinkronisasi API", included: true },
   { label: "Forecasting AI 30 hari", included: true },
   { label: "Notifikasi stok menipis", included: true },
-  { label: "Rekomendasi restock otomatis", included: false },
-  { label: "Multi-toko", included: false },
-  { label: "Akses API", included: false },
+  { label: "Rekomendasi restock otomatis", included: true },
+  { label: "Multi-toko", included: true },
+  { label: "Akses API", included: true },
 ];
 
 export function PricingPage() {

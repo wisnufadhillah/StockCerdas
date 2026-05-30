@@ -5,6 +5,7 @@ export type SessionUser = {
   email: string;
   role: "superadmin" | "useradmin";
   business_name?: string | null;
+  profile_image_url?: string | null;
   plan?: string;
 };
 

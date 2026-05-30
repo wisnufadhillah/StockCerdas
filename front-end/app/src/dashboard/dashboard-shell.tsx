@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, FormEvent } from "react";
 import { LogoutButton } from "@/dashboard/logout-button";
 import { SessionProfile } from "@/dashboard/session-profile";
+import { saveSession } from "@/auth/session";
 import * as api from "@/lib/api";
 import {
   Chart as ChartJS,
@@ -97,6 +98,19 @@ export function DashboardShell({ role, view = "dashboard", action }: { role: Das
   const isSuperAdmin = role === "superadmin";
   const navItems = isSuperAdmin ? superAdminNav : userAdminNav;
   const page = pageTitles[`${role}-${view}`] ?? pageTitles[`${role}-dashboard`];
+  const [shellPlan, setShellPlan] = useState<string>("free");
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
+
+  useEffect(() => {
+    const sessionStr = localStorage.getItem("stockcerdas_session");
+    if (!sessionStr) return;
+
+    try {
+      const session = JSON.parse(sessionStr);
+      if (session.plan) setShellPlan(session.plan);
+    } catch (e) {}
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#eef1f4] text-[#172033]">
@@ -125,7 +139,21 @@ export function DashboardShell({ role, view = "dashboard", action }: { role: Das
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="hidden sm:block"><SessionProfile compact /></div>
-                <button className="hidden sm:inline-flex h-[38px] items-center justify-center rounded-lg border border-[#cfd6df] bg-white px-4 text-sm font-extrabold text-[#334155] transition hover:border-[#0f8276] hover:text-[#0f8276]">30 Hari</button>
+                {!isSuperAdmin && (
+                  shellPlan === "pro" ? (
+                    <span className="hidden h-[38px] items-center justify-center rounded-lg border border-[#cfd6df] bg-white px-4 text-sm font-extrabold uppercase text-[#0f8276] sm:inline-flex">
+                      Pro
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setShowUpgradePrompt(true)}
+                      className="hidden h-[38px] items-center justify-center rounded-lg border border-[#cfd6df] bg-white px-4 text-sm font-extrabold text-[#334155] transition hover:border-[#0f8276] hover:text-[#0f8276] sm:inline-flex"
+                    >
+                      Upgrade
+                    </button>
+                  )
+                )}
                 <Link href={page.ctaHref ?? "#"} className="inline-flex h-[38px] items-center justify-center rounded-lg border border-transparent bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]">{page.cta}</Link>
                 <LogoutButton compact />
               </div>
@@ -147,6 +175,55 @@ export function DashboardShell({ role, view = "dashboard", action }: { role: Das
           </div>
         </section>
       </div>
+      {showUpgradePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172033]/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-[420px] rounded-2xl border border-[#d8dde5] bg-white p-6 shadow-[0_24px_70px_rgba(17,24,39,0.22)]">
+            <p className="text-sm font-extrabold uppercase text-[#0f8276]">Upgrade Paket</p>
+            <h2 className="mt-2 text-2xl font-extrabold text-[#172033]">Aktifkan fitur Pro</h2>
+            <p className="mt-3 text-sm font-medium leading-6 text-[#657181]">
+              Paket Pro membuka akses forecasting 30 hari, multi-toko, import XLSX, sinkronisasi API, dan rekomendasi restock otomatis.
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowUpgradePrompt(false)}
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#cfd6df] px-4 text-sm font-extrabold text-[#334155] transition hover:border-[#0f8276] hover:text-[#0f8276]"
+              >
+                Nanti saja
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPaymentConfirm(true)}
+                className="inline-flex h-10 items-center justify-center rounded-lg bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]"
+              >
+                Lihat Paket Pro
+              </button>
+            </div>
+            {showPaymentConfirm && (
+              <div className="mt-6 rounded-xl border border-[#d8dde5] bg-[#f8fafc] p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-extrabold text-[#172033]">Paket Pro</p>
+                    <p className="mt-1 text-3xl font-extrabold text-[#0f8276]">Rp 150K<span className="text-sm text-[#657181]">/30 hari</span></p>
+                  </div>
+                  <span className="rounded-full bg-[#edf8f6] px-3 py-1 text-xs font-extrabold uppercase text-[#0f8276]">Popular</span>
+                </div>
+                <ul className="mt-4 space-y-2 text-sm font-semibold text-[#526072]">
+                  <li>Forecasting AI sampai 30 hari</li>
+                  <li>Multi-toko hingga 3 cabang</li>
+                  <li>Import CSV/XLSX dan sinkronisasi API</li>
+                </ul>
+                <button
+                  type="button"
+                  className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]"
+                >
+                  Konfirmasi Pembayaran
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -172,12 +249,14 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [tenantId, setTenantId] = useState<number | null>(null);
   const [plan, setPlan] = useState<string>("free");
+  const [account, setAccount] = useState<any>(null);
 
   useEffect(() => {
     const sessionStr = localStorage.getItem("stockcerdas_session");
     if (sessionStr) {
       try {
         const session = JSON.parse(sessionStr);
+        setAccount(session);
         setTenantId(session.tenant_id);
         if (session.plan) setPlan(session.plan);
       } catch (e) {}
@@ -335,8 +414,8 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
         const fileName = file.name;
         const fileExt = fileName.split('.').pop() || "csv";
         const fileContent = await file.text();
-        const res = await api.uploadData({ tenant_id: tenantId!, store_id: activeStoreId!, file_name: fileName, file_type: fileExt, file_content: fileContent });
-        setImportStatus(res.message);
+        const res = await api.uploadData({ tenant_id: tenantId!, store_id: activeStoreId!, file_name: fileName, file_type: fileExt, file_content: fileContent }); {/* ada merah diminiamp */}
+        setImportStatus(res.message || "Upload berhasil diproses"); {/* ada merah di minimap */}
       } catch (err: any) {
         setImportStatus(err.message);
       }
@@ -347,7 +426,7 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
       setImportStatus("Sinkronisasi sedang berjalan...");
       try {
         const res = await api.syncApiData();
-        setImportStatus(res.message);
+        setImportStatus(res.message || "Sinkronisasi selesai diproses"); {/* ada merah di minimap */}
       } catch (err: any) {
         setImportStatus(err.message);
       } finally {
@@ -371,7 +450,7 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
           {importStatus && <div className="mt-4 rounded bg-[#eef1f4] p-3 text-sm text-[#172033]">{importStatus}</div>}
         </Panel>
 
-        <Panel title="Sinkronisasi API E-Commerce">
+        <Panel title="Sinkronisasi API E-Commerce">  {/* ada merah di minimap  */}
           <div className="flex h-full flex-col justify-between gap-4 rounded-lg bg-[#f8fafb] p-6">
             <div>
               <h4 className="font-extrabold text-[#172033] mb-2">Integrasi Tokopedia & Shopee</h4>
@@ -488,51 +567,87 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
 
   if (view === "pengaturan") return (
     <div className="grid gap-6">
-      <Panel title="Pengaturan Toko" action="Simpan perubahan">
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <Panel title="Profil Akun" action="Edit profil" actionHref="/dashboard/useradmin/pengaturan/edit">
+          <div className="flex flex-wrap items-start gap-4 rounded-xl border border-[#e0e5ec] bg-[#f8fafb] p-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0f8276] text-xl font-extrabold text-white shadow-[0_10px_24px_rgba(15,130,118,0.22)]">
+              {account?.profile_image_url ? <Image src={account.profile_image_url} alt={account?.name || "Profil"} width={96} height={96} unoptimized className="h-full w-full object-cover" /> : (account?.name || "U").charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-extrabold uppercase tracking-wide text-[#0f8276]">Admin UMKM</p>
+              <h3 className="mt-1 text-2xl font-extrabold text-[#172033]">{account?.name || "Admin UMKM"}</h3>
+              <p className="mt-1 text-sm font-semibold text-[#657181]">{account?.email || "Email belum tersedia"}</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <SmallStat label="Nama usaha" value={account?.business_name || "-"} />
+                <SmallStat label="Cabang aktif" value={stores.find(s => s.id === activeStoreId)?.store_name || "-"} />
+              </div>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel title="Paket Berlangganan" action={plan === "pro" ? "Paket aktif" : "Upgrade"} actionHref={plan === "pro" ? "#" : "/paket"}>
+          <div className="rounded-xl border border-[#e0e5ec] bg-white p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-wide text-[#657181]">Paket saat ini</p>
+                <h3 className="mt-2 text-3xl font-extrabold text-[#172033]">{plan === "pro" ? "Pro" : "Free Trial"}</h3>
+              </div>
+              <StatusBadge status={plan === "pro" ? "Aktif" : "Free"} />
+            </div>
+            <div className="mt-5 grid gap-3">
+              <DetailRow label="Kuota toko" value={plan === "pro" ? "3 toko" : "1 toko"} />
+              <DetailRow label="Forecasting" value={plan === "pro" ? "30 hari" : "7 hari"} />
+              <DetailRow label="Import data" value={plan === "pro" ? "CSV/XLSX" : "CSV maks. 500 baris"} />
+            </div>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel title="Integrasi & Batas Akun" action="Simpan perubahan">
         <FeatureGrid items={
           [["Status API", "Terhubung ke endpoint inventaris dan prediksi."], ["Limitasi Toko", plan === "pro" ? "3 Toko Tersedia" : "1 Toko Tersedia (Maksimal untuk Free)"]]
         } />
       </Panel>
-      
-      <Panel title="Manajemen Cabang Toko" action={plan === "pro" ? "Tambah Toko" : "Upgrade ke Pro"} actionHref={plan === "pro" ? "/dashboard/useradmin/pengaturan/tambah" : "#"}>
-         <div className="overflow-x-auto">
-           <table className="w-full text-left text-sm border-collapse">
-             <thead>
-               <tr className="border-b border-[#e0e5ec] text-xs uppercase text-[#657181]">
-                 <th className="py-3 pr-4">Nama Toko</th>
-                 <th className="py-3 pr-4">Lokasi</th>
-                 <th className="py-3 pr-4">Status</th>
-               </tr>
-             </thead>
-             <tbody>
-               {stores.length > 0 ? stores.map(store => (
-                 <tr key={store.id} className="border-b border-[#eef1f4]">
-                   <td className="py-4 pr-4 font-extrabold text-[#172033]">{store.store_name}</td>
-                   <td className="py-4 pr-4 text-[#526072]">{store.location || "-"}</td>
-                   <td className="py-4 pr-4 flex items-center gap-2">
-                     <StatusBadge status={store.status} />
-                     <button onClick={async () => {
-                       if (confirm("Hapus toko ini?")) {
-                         await api.deleteStore(store.id);
-                         setStores(stores.filter(s => s.id !== store.id));
-                       }
-                     }} className="text-xs text-red-500 underline ml-2">Hapus</button>
-                   </td>
-                 </tr>
-               )) : (
-                 <tr className="border-b border-[#eef1f4]">
-                   <td colSpan={3} className="py-4 pr-4 text-[#526072] italic">Belum ada cabang terdaftar</td>
-                 </tr>
-               )}
-               {plan === "free" && (
-                 <tr><td colSpan={3} className="py-4 text-center text-[#657181]">Upgrade ke Pro untuk menambah cabang toko (Maksimal 3 Toko)</td></tr>
-               )}
-               {plan === "pro" && (
-                 <tr><td colSpan={3} className="py-4 text-center text-[#657181]">Anda menggunakan {stores.length} dari 3 kuota toko.</td></tr>
-               )}
-             </tbody>
-           </table>
-         </div>
+
+      <Panel title="Cabang Toko" action={plan === "pro" ? "Tambah Toko" : "Upgrade ke Pro"} actionHref={plan === "pro" ? "/dashboard/useradmin/pengaturan/tambah" : "#"}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-[#e0e5ec] text-xs uppercase text-[#657181]">
+                <th className="py-3 pr-4">Nama Toko</th>
+                <th className="py-3 pr-4">Lokasi</th>
+                <th className="py-3 pr-4">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stores.length > 0 ? stores.map(store => (
+                <tr key={store.id} className="border-b border-[#eef1f4]">
+                  <td className="py-4 pr-4 font-extrabold text-[#172033]">{store.store_name}</td>
+                  <td className="py-4 pr-4 text-[#526072]">{store.location || "-"}</td>
+                  <td className="py-4 pr-4 flex items-center gap-2">
+                    <StatusBadge status={store.status} />
+                    <button onClick={async () => {
+                      if (confirm("Hapus toko ini?")) {
+                        await api.deleteStore(store.id);
+                        setStores(stores.filter(s => s.id !== store.id));
+                      }
+                    }} className="text-xs text-red-500 underline ml-2">Hapus</button>
+                  </td>
+                </tr>
+              )) : (
+                <tr className="border-b border-[#eef1f4]">
+                  <td colSpan={3} className="py-4 pr-4 text-[#526072] italic">Belum ada cabang terdaftar</td>
+                </tr>
+              )}
+              {plan === "free" && (
+                <tr><td colSpan={3} className="py-4 text-center text-[#657181]">Upgrade ke Pro untuk menambah cabang toko (Maksimal 3 Toko)</td></tr>
+              )}
+              {plan === "pro" && (
+                <tr><td colSpan={3} className="py-4 text-center text-[#657181]">Anda menggunakan {stores.length} dari 3 kuota toko.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </Panel>
     </div>
   );
@@ -647,13 +762,17 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<string>("free");
+  const [account, setAccount] = useState<any>(null);
+  const [profilePreview, setProfilePreview] = useState<string>("");
 
   useEffect(() => {
     const sessionStr = localStorage.getItem("stockcerdas_session");
     if (sessionStr) {
       try {
         const session = JSON.parse(sessionStr);
+        setAccount(session);
         if (session.plan) setPlan(session.plan);
+        if (session.profile_image_url) setProfilePreview(session.profile_image_url);
       } catch (e) {}
     }
   }, []);
@@ -689,6 +808,20 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
   }, [view]);
 
   useEffect(() => {
+    if (view === "pengaturan" && role === "useradmin" && action === "edit") {
+      const sessionStr = localStorage.getItem("stockcerdas_session");
+      const session = JSON.parse(sessionStr || "{}");
+      setData({
+        owner_name: session.name || "",
+        email: session.email || "",
+        business_name: session.business_name || "",
+        profile_image_url: session.profile_image_url || "",
+      });
+      setProfilePreview(session.profile_image_url || "");
+      setLoading(false);
+      return;
+    }
+
     if ((action === "edit" || action === "detail" || action === "hapus") && id) {
       const fetchData = async () => {
         try {
@@ -718,7 +851,7 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
       };
       fetchData();
     }
-  }, [action, id, view]);
+  }, [action, id, role, view]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -761,7 +894,7 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
         if (action === "tambah") await api.createTransaction(payload);
       } else if (view === "forecasting") {
         payload.product_id = Number(payload.product_id) as any;
-        if (action === "tambah") await api.createPrediction({ product_id: payload.product_id as number, forecast_period: payload.forecast_period as string });
+        if (action === "tambah") await api.createPrediction({ product_id: Number(payload.product_id), forecast_period: String(payload.forecast_period || "7_days") });
       } else if (view === "kategori") {
         if (action === "tambah") await api.createCategory(payload as any);
         else if (action === "edit") await api.updateCategory(id!, payload as any);
@@ -769,11 +902,36 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
         if (action === "tambah") await api.createTenant(payload);
         else if (action === "edit") await api.updateTenant(id!, payload);
       } else if (view === "pengaturan" && role === "useradmin") {
+        if (action === "edit") {
+          if (!account?.tenant_id) {
+            setError("Tenant akun tidak ditemukan. Silakan login ulang.");
+            setIsSubmitting(false);
+            return;
+          }
+
+          const updated = await api.updateTenant(account.tenant_id, {
+            owner_name: payload.owner_name,
+            email: payload.email,
+            business_name: payload.business_name,
+            profile_image_url: profilePreview || undefined,
+          });
+          const updatedSession = {
+            ...account,
+            name: updated.data?.owner_name || payload.owner_name,
+            email: updated.data?.email || payload.email,
+            business_name: updated.data?.business_name || payload.business_name,
+            profile_image_url: updated.data?.profile_image_url || profilePreview || null,
+          };
+          saveSession(updatedSession);
+          setAccount(updatedSession);
+        } else {
         if (plan !== "pro") {
            setError("Hanya akun Pro yang bisa menambah cabang toko.");
+           setIsSubmitting(false);
            return;
         }
         if (action === "tambah") await api.createStore(payload);
+        }
       }
       
       router.push(backHref);
@@ -797,13 +955,28 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
     }
   };
 
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => setProfilePreview(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  };
+
   if (loading) return <LoadingSpinner />;
 
   if (action === "detail") {
     return (
       <Panel title={`Detail ${view}`} action="Kembali" actionHref={backHref}>
         {error && <div className="mb-4 rounded border border-red-400 bg-red-100 p-3 text-red-700">{error}</div>}
-        <pre className="bg-[#f8fafb] p-4 rounded-lg overflow-auto text-sm text-[#172033]">{JSON.stringify(data, null, 2)}</pre>
+        {view === "inventaris" ? (
+          <ProductDetail data={data} />
+        ) : view === "pengguna" ? (
+          <TenantDetail data={data} />
+        ) : (
+          <pre className="bg-[#f8fafb] p-4 rounded-lg overflow-auto text-sm text-[#172033]">{JSON.stringify(data, null, 2)}</pre>
+        )}
       </Panel>
     );
   }
@@ -821,6 +994,50 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
           </button>
           </div>
         </div>
+      </Panel>
+    );
+  }
+
+  if (view === "pengaturan" && role === "useradmin" && action === "edit") {
+    const initial = String(data?.owner_name || account?.name || "U").charAt(0).toUpperCase();
+
+    return (
+      <Panel title="Edit Profil Akun" action="Kembali" actionHref={backHref}>
+        {error && <div className="mb-4 rounded border border-red-400 bg-red-100 p-3 text-red-700">{error}</div>}
+        <form onSubmit={handleSubmit} className="grid gap-6">
+          <div className="flex flex-wrap items-center gap-5 rounded-xl border border-[#e0e5ec] bg-[#f8fafb] p-5">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0f8276] text-3xl font-extrabold text-white shadow-[0_10px_24px_rgba(15,130,118,0.22)]">
+              {profilePreview ? <Image src={profilePreview} alt="Preview profil" width={96} height={96} unoptimized className="h-full w-full object-cover" /> : initial}
+            </div>
+            <div className="min-w-[220px] flex-1">
+              <p className="text-sm font-extrabold text-[#172033]">Foto Profil</p>
+              <p className="mt-1 text-sm font-medium text-[#657181]">Gunakan gambar persegi agar avatar tampil rapi di dashboard.</p>
+              <label className="mt-4 inline-flex h-10 cursor-pointer items-center justify-center rounded-lg border border-[#cfd6df] bg-white px-4 text-sm font-extrabold text-[#0f8276] transition hover:border-[#0f8276] hover:bg-[#edf8f6]">
+                Pilih gambar
+                <input type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
+              </label>
+            </div>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <label className="grid gap-2">
+              <span className="text-xs font-bold uppercase text-[#657181]">Nama Admin</span>
+              <input name="owner_name" required defaultValue={data?.owner_name || account?.name || ""} className="h-11 w-full rounded-lg border border-[#cfd6df] bg-white px-3 text-sm font-bold text-[#172033] outline-none transition focus:border-[#0f8276] focus:ring-2 focus:ring-[#0f8276]/15" />
+            </label>
+            <label className="grid gap-2">
+              <span className="text-xs font-bold uppercase text-[#657181]">Email</span>
+              <input name="email" type="email" required defaultValue={data?.email || account?.email || ""} className="h-11 w-full rounded-lg border border-[#cfd6df] bg-white px-3 text-sm font-bold text-[#172033] outline-none transition focus:border-[#0f8276] focus:ring-2 focus:ring-[#0f8276]/15" />
+            </label>
+            <label className="grid gap-2 md:col-span-2">
+              <span className="text-xs font-bold uppercase text-[#657181]">Nama Usaha</span>
+              <input name="business_name" required defaultValue={data?.business_name || account?.business_name || ""} className="h-11 w-full rounded-lg border border-[#cfd6df] bg-white px-3 text-sm font-bold text-[#172033] outline-none transition focus:border-[#0f8276] focus:ring-2 focus:ring-[#0f8276]/15" />
+            </label>
+          </div>
+
+          <button type="submit" disabled={isSubmitting} className={`rounded-lg bg-[#0f8276] px-4 py-2 text-sm font-extrabold text-white transition ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#0b6f66]'}`}>
+            {isSubmitting ? "Menyimpan..." : "Simpan Profil"}
+          </button>
+        </form>
       </Panel>
     );
   }
@@ -935,14 +1152,16 @@ function MetricGrid({ metrics }: { metrics: Metric[] }) {
   );
 }
 
-function Panel({ title, action, actionHref, className = "", children }: { title: string; action: string; actionHref?: string; className?: string; children: React.ReactNode }) {
+function Panel({ title, action, actionHref, className = "", children }: { title: string; action?: string; actionHref?: string; className?: string; children: React.ReactNode }) {
   return (
     <section className={`rounded-lg border border-[#d8dde5] bg-white p-5 ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold text-[#172033]">{title}</h2>
-        <Link href={actionHref ?? "#"} className="rounded-lg border border-[#cfd6df] px-3 py-2 text-xs font-extrabold text-[#0f8276] transition hover:border-[#0f8276] hover:bg-[#edf8f6]">
-          {action}
-        </Link>
+        {action && (
+          <Link href={actionHref ?? "#"} className="rounded-lg border border-[#cfd6df] px-3 py-2 text-xs font-extrabold text-[#0f8276] transition hover:border-[#0f8276] hover:bg-[#edf8f6]">
+            {action}
+          </Link>
+        )}
       </div>
       <div className="mt-4">{children}</div>
     </section>
@@ -986,6 +1205,67 @@ function ProductTable({ data, compact = false, actionBase }: { data: any[]; comp
           {data.length === 0 && <tr><td colSpan={8} className="py-4 text-center text-[#657181]">Belum ada produk</td></tr>}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function ProductDetail({ data }: { data: any }) {
+  if (!data) {
+    return <p className="text-sm font-semibold text-[#657181]">Data produk tidak ditemukan.</p>;
+  }
+
+  const currentStock = Number(data.current_stock || 0);
+  const minimumStock = Number(data.minimum_stock || 0);
+  const status = currentStock === 0 ? "Kosong" : currentStock <= minimumStock ? "Menipis" : "Aman";
+  const price = Number(data.price || 0);
+  const createdAt = data.created_at ? new Date(data.created_at).toLocaleDateString("id-ID") : "-";
+  const updatedAt = data.updated_at ? new Date(data.updated_at).toLocaleDateString("id-ID") : "-";
+
+  return (
+    <div className="grid gap-5">
+      <div className="rounded-xl border border-[#e0e5ec] bg-[#f8fafb] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-wide text-[#0f8276]">{data.sku || `Produk #${data.id}`}</p>
+            <h2 className="mt-2 text-2xl font-extrabold text-[#172033]">{data.name || "Produk tanpa nama"}</h2>
+            <p className="mt-1 text-sm font-semibold text-[#657181]">Kategori: {data.category || "-"}</p>
+          </div>
+          <StatusBadge status={status} />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <SmallStat label="Stok saat ini" value={`${currentStock} unit`} />
+        <SmallStat label="Minimum stok" value={`${minimumStock} unit`} />
+        <SmallStat label="Harga" value={`Rp${price.toLocaleString("id-ID")}`} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-[#e0e5ec] bg-white p-4">
+          <p className="text-xs font-extrabold uppercase text-[#657181]">Identitas Produk</p>
+          <div className="mt-4 grid gap-3 text-sm">
+            <DetailRow label="ID Produk" value={data.id || "-"} />
+            <DetailRow label="Tenant ID" value={data.tenant_id || "-"} />
+            <DetailRow label="Store ID" value={data.store_id || "-"} />
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#e0e5ec] bg-white p-4">
+          <p className="text-xs font-extrabold uppercase text-[#657181]">Riwayat Data</p>
+          <div className="mt-4 grid gap-3 text-sm">
+            <DetailRow label="Dibuat" value={createdAt} />
+            <DetailRow label="Diperbarui" value={updatedAt} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-[#eef1f4] pb-2 last:border-b-0 last:pb-0">
+      <span className="font-semibold text-[#657181]">{label}</span>
+      <span className="text-right font-extrabold text-[#172033]">{value}</span>
     </div>
   );
 }
@@ -1050,6 +1330,57 @@ function TenantTable({ data, compact = false, actionBase }: { data: any[]; compa
           {data.length === 0 && <tr><td colSpan={7} className="py-4 text-center text-[#657181]">Belum ada UMKM terdaftar</td></tr>}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function TenantDetail({ data }: { data: any }) {
+  if (!data) {
+    return <p className="text-sm font-semibold text-[#657181]">Data pengguna tidak ditemukan.</p>;
+  }
+
+  const status = data.status === "active" ? "Aktif" : data.status || "review";
+  const plan = data.plan === "pro" ? "Pro" : "Free Trial";
+  const createdAt = data.created_at ? new Date(data.created_at).toLocaleDateString("id-ID") : "-";
+  const productCount = Number(data.product_count || 0);
+
+  return (
+    <div className="grid gap-5">
+      <div className="rounded-xl border border-[#e0e5ec] bg-[#f8fafb] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-wide text-[#0f8276]">Tenant #{data.id}</p>
+            <h2 className="mt-2 text-2xl font-extrabold text-[#172033]">{data.business_name || "Nama usaha belum tersedia"}</h2>
+            <p className="mt-1 text-sm font-semibold text-[#657181]">Pemilik: {data.owner_name || "-"}</p>
+          </div>
+          <StatusBadge status={status} />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <SmallStat label="Paket" value={plan} />
+        <SmallStat label="Total produk" value={`${productCount} produk`} />
+        <SmallStat label="Status akun" value={status} />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-[#e0e5ec] bg-white p-4">
+          <p className="text-xs font-extrabold uppercase text-[#657181]">Kontak & Identitas</p>
+          <div className="mt-4 grid gap-3 text-sm">
+            <DetailRow label="Email" value={data.email || "-"} />
+            <DetailRow label="Owner" value={data.owner_name || "-"} />
+            <DetailRow label="Tenant ID" value={data.id || "-"} />
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#e0e5ec] bg-white p-4">
+          <p className="text-xs font-extrabold uppercase text-[#657181]">Langganan</p>
+          <div className="mt-4 grid gap-3 text-sm">
+            <DetailRow label="Paket" value={plan} />
+            <DetailRow label="Limit toko" value={data.plan === "pro" ? "3 toko" : "1 toko"} />
+            <DetailRow label="Terdaftar" value={createdAt} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

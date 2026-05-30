@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   business_name VARCHAR(150) NOT NULL,
   owner_name VARCHAR(120) NOT NULL,
   email VARCHAR(150) UNIQUE NOT NULL,
+  profile_image_url TEXT,
   business_type VARCHAR(80) DEFAULT 'Retail',
   status VARCHAR(30) DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW(),
