@@ -133,7 +133,7 @@ export async function deleteStore(id: string | number) {
 }
 
 // === IMPORT ===
-export async function uploadData(data: { tenant_id: number, file_name: string, file_type: string, file_content?: string }) {
+export async function uploadData(data: { tenant_id: number, store_id?: number, file_name: string, file_type: string, file_content?: string }) {
   return fetchApi<any>("/import/upload", {
     method: "POST",
     body: JSON.stringify(data),
