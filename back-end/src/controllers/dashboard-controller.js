@@ -1,7 +1,14 @@
 const { pool } = require("../db/pool");
 const { env } = require("../config/env");
 const { recordAuditLog } = require("../services/audit-log-service");
-const { buildServiceCheckResult, getServiceTimeoutMs, normalizeAuditLogRow, resolveServiceUrl } = require("../services/system-monitoring-service");
+const {
+  buildServiceCheckResult,
+  getServiceFetchOptions,
+  getServiceTimeoutMs,
+  isServiceHttpStatusReachable,
+  normalizeAuditLogRow,
+  resolveServiceUrl,
+} = require("../services/system-monitoring-service");
 
 async function getUsers(req, res) {
   const result = await pool.query(
@@ -91,8 +98,11 @@ async function checkService(service) {
   const timeout = setTimeout(() => controller.abort(), getServiceTimeoutMs(service));
 
   try {
-    const response = await fetch(targetUrl, { method: "GET", signal: controller.signal });
-    return buildServiceCheckResult(service, { ok: response.ok, latencyMs: Date.now() - startedAt });
+    const response = await fetch(targetUrl, { ...getServiceFetchOptions(service), signal: controller.signal });
+    return buildServiceCheckResult(service, {
+      ok: isServiceHttpStatusReachable(service, response.status),
+      latencyMs: Date.now() - startedAt,
+    });
   } catch (error) {
     return buildServiceCheckResult(service, { ok: false, latencyMs: Date.now() - startedAt });
   } finally {

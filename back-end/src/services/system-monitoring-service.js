@@ -33,6 +33,18 @@ function getServiceTimeoutMs(service) {
   return 3000;
 }
 
+function getServiceFetchOptions() {
+  return {
+    method: "GET",
+    redirect: "manual",
+  };
+}
+
+function isServiceHttpStatusReachable(service, status) {
+  if (status >= 200 && status < 300) return true;
+  return service.service_type === "data-science" && status >= 300 && status < 400;
+}
+
 function buildServiceCheckResult(service, { ok, latencyMs }) {
   return {
     id: service.id,
@@ -45,7 +57,9 @@ function buildServiceCheckResult(service, { ok, latencyMs }) {
 module.exports = {
   buildServiceCheckResult,
   classifyServiceResult,
+  getServiceFetchOptions,
   getServiceTimeoutMs,
+  isServiceHttpStatusReachable,
   normalizeAuditLogRow,
   resolveServiceUrl,
 };

@@ -3,7 +3,9 @@ const test = require("node:test");
 
 const {
   classifyServiceResult,
+  getServiceFetchOptions,
   normalizeAuditLogRow,
+  isServiceHttpStatusReachable,
   resolveServiceUrl,
   getServiceTimeoutMs,
 } = require("../src/services/system-monitoring-service");
@@ -66,4 +68,15 @@ test("getServiceTimeoutMs gives Streamlit Cloud enough time to wake up", () => {
 
 test("getServiceTimeoutMs keeps local backend checks fast", () => {
   assert.equal(getServiceTimeoutMs({ service_type: "backend" }), 3000);
+});
+
+test("isServiceHttpStatusReachable treats Streamlit auth redirects as reachable", () => {
+  assert.equal(isServiceHttpStatusReachable({ service_type: "data-science" }, 303), true);
+});
+
+test("getServiceFetchOptions avoids following external auth redirects", () => {
+  assert.deepEqual(getServiceFetchOptions({ service_type: "data-science" }), {
+    method: "GET",
+    redirect: "manual",
+  });
 });
