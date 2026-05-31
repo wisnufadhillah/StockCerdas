@@ -150,6 +150,16 @@ export async function getSystemServices() {
   return fetchApi<any[]>("/dashboard/system-services");
 }
 
+export async function refreshSystemServices() {
+  return fetchApi<any[]>("/dashboard/system-services/refresh", {
+    method: "POST",
+  });
+}
+
+export async function getAuditLogs() {
+  return fetchApi<any[]>("/dashboard/audit-logs");
+}
+
 export async function getSystemSettings() {
   return fetchApi<any[]>("/dashboard/system-settings");
 }

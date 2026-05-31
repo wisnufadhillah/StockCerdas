@@ -1,4 +1,5 @@
 const { pool } = require("../db/pool");
+const { recordAuditLog } = require("../services/audit-log-service");
 
 async function uploadData(req, res) {
   try {
@@ -74,6 +75,13 @@ async function uploadData(req, res) {
       [targetTenant, file_name, file_type, parsedProducts]
     );
 
+    await recordAuditLog(pool, {
+      action: "data_imported",
+      entityType: "import_batch",
+      entityId: result.rows[0].id,
+      metadata: { tenant_id: targetTenant, store_id, file_name, file_type, total_rows: parsedProducts },
+    });
+
     res.status(201).json({ status: "success", data: result.rows[0], message: `File berhasil diupload. ${parsedProducts} produk unik berhasil ditambahkan ke inventaris.` });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });
@@ -85,6 +93,12 @@ async function syncApi(req, res) {
     // If we want to simulate properly, we should expect a tenant_id. Let's just mock the success.
     // For now we assume a hardcoded or passed tenant_id is valid, but frontend doesn't pass one.
     // To avoid failure, we just respond with success.
+    await recordAuditLog(pool, {
+      action: "ecommerce_synced",
+      entityType: "integration",
+      metadata: { source: "tokopedia_shopee" },
+    });
+
     res.json({ status: "success", message: "Sinkronisasi API Tokopedia & Shopee berhasil. 45 produk & transaksi terupdate." });
   } catch (error) {
     res.status(500).json({ status: "error", message: error.message });

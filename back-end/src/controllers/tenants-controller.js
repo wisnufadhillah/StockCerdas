@@ -1,4 +1,5 @@
 const { pool } = require("../db/pool");
+const { recordAuditLog } = require("../services/audit-log-service");
 
 async function getTenants(req, res) {
   const result = await pool.query(
@@ -27,6 +28,13 @@ async function createTenant(req, res) {
      RETURNING *`,
     [business_name, owner_name, email, profile_image_url, business_type, status]
   );
+
+  await recordAuditLog(pool, {
+    action: "tenant_created",
+    entityType: "tenant",
+    entityId: result.rows[0].id,
+    metadata: { business_name, email },
+  });
 
   res.status(201).json({ status: "success", data: result.rows[0] });
 }
@@ -76,6 +84,13 @@ async function updateTenant(req, res) {
     return;
   }
 
+  await recordAuditLog(pool, {
+    action: "tenant_updated",
+    entityType: "tenant",
+    entityId: Number(req.params.id),
+    metadata: { business_name: result.rows[0].business_name, email: result.rows[0].email, status: result.rows[0].status },
+  });
+
   res.json({ status: "success", data: result.rows[0] });
 }
 
@@ -97,6 +112,11 @@ async function deleteTenant(req, res) {
     }
 
     await client.query("COMMIT");
+    await recordAuditLog(pool, {
+      action: "tenant_deleted",
+      entityType: "tenant",
+      entityId: Number(req.params.id),
+    });
     res.json({ status: "success", message: "Akun UMKM dan seluruh user terkait berhasil dihapus" });
   } catch (error) {
     await client.query("ROLLBACK");

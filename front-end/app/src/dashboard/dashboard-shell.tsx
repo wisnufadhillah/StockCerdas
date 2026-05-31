@@ -674,7 +674,10 @@ function SuperAdminContent({ view }: { view: SuperAdminView }) {
   const [tenants, setTenants] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshingServices, setRefreshingServices] = useState(false);
+  const [monitoringMessage, setMonitoringMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -687,6 +690,13 @@ function SuperAdminContent({ view }: { view: SuperAdminView }) {
         setTenants(tenRes.data || []);
         setServices(srvRes.data || []);
         setUsers(usrRes.data || []);
+
+        try {
+          const logRes = await api.getAuditLogs();
+          setAuditLogs(logRes.data || []);
+        } catch {
+          setAuditLogs([]);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -695,6 +705,22 @@ function SuperAdminContent({ view }: { view: SuperAdminView }) {
     }
     loadData();
   }, []);
+
+  async function handleRefreshServices() {
+    setRefreshingServices(true);
+    setMonitoringMessage(null);
+    try {
+      const serviceRes = await api.refreshSystemServices();
+      const logRes = await api.getAuditLogs();
+      setServices(serviceRes.data || []);
+      setAuditLogs(logRes.data || []);
+      setMonitoringMessage(serviceRes.message || "Status service berhasil diperbarui");
+    } catch (err: any) {
+      setMonitoringMessage(err.message || "Gagal memperbarui status service");
+    } finally {
+      setRefreshingServices(false);
+    }
+  }
 
   if (loading) return <LoadingSpinner />;
 
@@ -718,11 +744,23 @@ function SuperAdminContent({ view }: { view: SuperAdminView }) {
   );
   if (view === "monitoring") return (
     <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-      <Panel title="Status Service" action="Refresh status" actionHref="/dashboard/superadmin/monitoring">
+      <Panel title="Status Service">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#f8fafb] p-4">
+          <p className="text-sm font-semibold text-[#657181]">Cek ulang API, service AI, dan worker yang terdaftar.</p>
+          <button
+            type="button"
+            onClick={handleRefreshServices}
+            disabled={refreshingServices}
+            className="rounded-lg border border-[#cfd6df] px-3 py-2 text-xs font-extrabold text-[#0f8276] transition hover:border-[#0f8276] hover:bg-[#edf8f6] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {refreshingServices ? "Mengecek..." : "Refresh status"}
+          </button>
+          {monitoringMessage && <p className="w-full text-sm font-semibold text-[#526072]">{monitoringMessage}</p>}
+        </div>
         <ServiceList data={services} />
       </Panel>
-      <Panel title="Log Pengguna" action="Lihat semua">
-         <p className="p-4 text-sm text-[#657181]">Total {users.length} pengguna terdaftar di sistem.</p>
+      <Panel title="Log Pengguna">
+         <AuditLogList data={auditLogs} totalUsers={users.length} />
       </Panel>
     </div>
   );
@@ -1385,6 +1423,52 @@ function TenantDetail({ data }: { data: any }) {
   );
 }
 
+const auditActionLabels: Record<string, string> = {
+  login: "Login pengguna",
+  tenant_registered: "Registrasi akun UMKM",
+  tenant_created: "Tenant dibuat",
+  tenant_updated: "Tenant diperbarui",
+  tenant_deleted: "Tenant dihapus",
+  data_imported: "Import data",
+  ecommerce_synced: "Sinkronisasi e-commerce",
+  prediction_created: "Prediksi dibuat",
+  system_services_refreshed: "Status service direfresh",
+  schema_migrated: "Migrasi database",
+};
+
+function formatDateTime(value?: string) {
+  if (!value) return "Belum pernah dicek";
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function AuditLogList({ data, totalUsers }: { data: any[]; totalUsers: number }) {
+  return (
+    <div className="space-y-3">
+      <p className="rounded-lg bg-[#f8fafb] p-4 text-sm font-semibold text-[#657181]">
+        Total {totalUsers} pengguna terdaftar. Aktivitas terbaru ditampilkan dari audit log sistem.
+      </p>
+      {data.map((log) => (
+        <article key={log.id} className="rounded-lg border border-[#e0e5ec] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-extrabold text-[#172033]">{auditActionLabels[log.action] || log.action}</p>
+              <p className="mt-1 text-xs font-semibold text-[#657181]">
+                {log.actor?.name || "Sistem"}{log.actor?.email ? ` - ${log.actor.email}` : ""}
+              </p>
+            </div>
+            <span className="rounded-full bg-[#edf4ff] px-3 py-1 text-xs font-extrabold text-[#1d5fa7]">{log.entity_type}</span>
+          </div>
+          <p className="mt-3 text-xs font-semibold text-[#657181]">{formatDateTime(log.created_at)}</p>
+        </article>
+      ))}
+      {data.length === 0 && <p className="text-[#657181]">Belum ada aktivitas pengguna yang tercatat.</p>}
+    </div>
+  );
+}
+
 function ServiceList({ data }: { data: any[] }) {
   return (
     <div className="space-y-3">
@@ -1395,9 +1479,10 @@ function ServiceList({ data }: { data: any[] }) {
               <p className="text-sm font-extrabold text-[#172033]">{service.service_name}</p>
               <p className="mt-1 text-xs font-semibold text-[#657181]">{service.endpoint}</p>
             </div>
-            <StatusBadge status={service.status === "online" ? "Online" : "Perlu cek"} />
+            <StatusBadge status={service.status === "online" ? "Online" : service.status === "warning" ? "Perlu cek" : "Offline"} />
           </div>
           <p className="mt-3 text-sm font-bold text-[#526072]">Latency {service.latency_ms} ms</p>
+          <p className="mt-1 text-xs font-semibold text-[#657181]">Terakhir dicek {formatDateTime(service.last_checked_at)}</p>
         </article>
       ))}
       {data.length === 0 && <p className="text-[#657181]">Memuat status layanan...</p>}
@@ -1463,7 +1548,7 @@ function SmallStat({ label, value }: { label: string; value: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const warningStatuses = ["Menipis", "Perlu cek", "Review", "Stok Keluar", "Sedang"];
-  const dangerStatuses = ["Kosong", "Tinggi", "offline", "error"];
+  const dangerStatuses = ["Kosong", "Tinggi", "Offline", "offline", "error"];
   const className = dangerStatuses.includes(status)
     ? "bg-[#fff1f1] text-[#b42318]"
     : warningStatuses.includes(status)

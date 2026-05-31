@@ -1,4 +1,5 @@
 const { pool } = require("../db/pool");
+const { recordAuditLog } = require("../services/audit-log-service");
 
 async function login(req, res) {
   const email = String(req.body.email || "").trim().toLowerCase();
@@ -31,6 +32,13 @@ async function login(req, res) {
   }
 
   await pool.query("UPDATE users SET last_login_at = NOW() WHERE id = $1", [user.id]);
+  await recordAuditLog(pool, {
+    actorUserId: user.id,
+    action: "login",
+    entityType: "user",
+    entityId: user.id,
+    metadata: { email: user.email, role: user.role },
+  });
 
   res.json({
     status: "success",
@@ -93,6 +101,14 @@ async function register(req, res) {
     await client.query("COMMIT");
 
     const user = userResult.rows[0];
+    await recordAuditLog(pool, {
+      actorUserId: user.id,
+      action: "tenant_registered",
+      entityType: "tenant",
+      entityId: tenantResult.rows[0].id,
+      metadata: { business_name: tenantResult.rows[0].business_name, email: user.email },
+    });
+
     res.status(201).json({
       status: "success",
       data: {

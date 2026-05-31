@@ -8,6 +8,8 @@ const {
   getStoreSettings,
   getSystemSettings,
   getSystemServices,
+  refreshSystemServices,
+  getAuditLogs,
 } = require("../controllers/dashboard-controller");
 
 const router = express.Router();
@@ -19,5 +21,7 @@ router.get("/reports", asyncHandler(getReports));
 router.get("/store-settings", asyncHandler(getStoreSettings));
 router.get("/system-settings", asyncHandler(getSystemSettings));
 router.get("/system-services", asyncHandler(getSystemServices));
+router.post("/system-services/refresh", asyncHandler(refreshSystemServices));
+router.get("/audit-logs", asyncHandler(getAuditLogs));
 
 module.exports = { dashboardRoutes: router };

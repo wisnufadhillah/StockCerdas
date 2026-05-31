@@ -1,6 +1,7 @@
 const { pool } = require("../db/pool");
 const { requestAiPrediction } = require("../services/ai-service");
 const { generateRestockRecommendation } = require("../services/generative-ai-service");
+const { recordAuditLog } = require("../services/audit-log-service");
 
 function normalizePeriod(period) {
   const allowed = new Set(["7_days", "14_days", "30_days"]);
@@ -131,6 +132,13 @@ async function createPrediction(req, res) {
       },
     ]
   );
+
+  await recordAuditLog(pool, {
+    action: "prediction_created",
+    entityType: "prediction",
+    entityId: result.rows[0].id,
+    metadata: { product_id: product.id, product_name: product.name, forecast_period: normalizedPeriod, risk_level: riskLevel },
+  });
 
   res.status(201).json({
     status: "success",
