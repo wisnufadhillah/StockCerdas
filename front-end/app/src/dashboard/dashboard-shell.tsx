@@ -1432,9 +1432,31 @@ const auditActionLabels: Record<string, string> = {
   data_imported: "Import data",
   ecommerce_synced: "Sinkronisasi e-commerce",
   prediction_created: "Prediksi dibuat",
-  system_services_refreshed: "Status service direfresh",
+  system_services_refreshed: "Monitoring sistem diperbarui",
   schema_migrated: "Migrasi database",
 };
+
+const auditEntityLabels: Record<string, string> = {
+  user: "Pengguna",
+  tenant: "Akun UMKM",
+  import_batch: "Import Data",
+  integration: "Integrasi",
+  prediction: "Prediksi",
+  system_service: "Monitoring Sistem",
+  database: "Database",
+};
+
+function describeAuditLog(log: any) {
+  if (log.action === "system_services_refreshed") {
+    const total = log.metadata?.total_services;
+    return `Sistem mengecek ulang ${total || "semua"} service: API, AI, dashboard Streamlit, dan import worker.`;
+  }
+  if (log.action === "login") return "Pengguna berhasil masuk ke dashboard.";
+  if (log.action === "data_imported") return `File ${log.metadata?.file_name || "data"} diimport ke inventaris.`;
+  if (log.action === "prediction_created") return `Prediksi stok dibuat untuk ${log.metadata?.product_name || "produk"}.`;
+  if (log.action === "ecommerce_synced") return "Integrasi Tokopedia dan Shopee disinkronkan.";
+  return "Aktivitas tercatat otomatis untuk kebutuhan audit dan troubleshooting.";
+}
 
 function formatDateTime(value?: string) {
   if (!value) return "Belum pernah dicek";
@@ -1448,7 +1470,7 @@ function AuditLogList({ data, totalUsers }: { data: any[]; totalUsers: number })
   return (
     <div className="space-y-3">
       <p className="rounded-lg bg-[#f8fafb] p-4 text-sm font-semibold text-[#657181]">
-        Total {totalUsers} pengguna terdaftar. Aktivitas terbaru ditampilkan dari audit log sistem.
+        Total {totalUsers} pengguna terdaftar. Log ini mencatat aktivitas penting seperti login, import data, prediksi, perubahan akun, dan refresh monitoring.
       </p>
       {data.map((log) => (
         <article key={log.id} className="rounded-lg border border-[#e0e5ec] p-4">
@@ -1459,9 +1481,10 @@ function AuditLogList({ data, totalUsers }: { data: any[]; totalUsers: number })
                 {log.actor?.name || "Sistem"}{log.actor?.email ? ` - ${log.actor.email}` : ""}
               </p>
             </div>
-            <span className="rounded-full bg-[#edf4ff] px-3 py-1 text-xs font-extrabold text-[#1d5fa7]">{log.entity_type}</span>
+            <span className="rounded-full bg-[#edf4ff] px-3 py-1 text-xs font-extrabold text-[#1d5fa7]">{auditEntityLabels[log.entity_type] || log.entity_type}</span>
           </div>
-          <p className="mt-3 text-xs font-semibold text-[#657181]">{formatDateTime(log.created_at)}</p>
+          <p className="mt-3 text-sm font-semibold text-[#526072]">{describeAuditLog(log)}</p>
+          <p className="mt-2 text-xs font-semibold text-[#657181]">{formatDateTime(log.created_at)}</p>
         </article>
       ))}
       {data.length === 0 && <p className="text-[#657181]">Belum ada aktivitas pengguna yang tercatat.</p>}

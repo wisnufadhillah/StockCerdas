@@ -201,6 +201,6 @@ INSERT INTO system_services (service_name, service_type, endpoint, status, laten
 VALUES
   ('RESTful API', 'backend', '/api/health', 'online', 92),
   ('Service AI', 'ai', '/predict', 'online', 180),
-  ('Dashboard Data', 'data-science', 'streamlit', 'online', 120),
-  ('Import Worker', 'worker', '/api/imports', 'warning', 310)
+  ('Dashboard Data', 'data-science', 'https://stockcerdas.streamlit.app/', 'online', 120),
+  ('Import Worker', 'worker', '/api/import/health', 'online', 120)
 ON CONFLICT (service_name) DO NOTHING;

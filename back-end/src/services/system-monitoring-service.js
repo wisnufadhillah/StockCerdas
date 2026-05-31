@@ -19,6 +19,14 @@ function normalizeAuditLogRow(row) {
   };
 }
 
+function resolveServiceUrl(service, env = {}) {
+  if (!service.endpoint) return null;
+  if (/^https?:\/\//i.test(service.endpoint)) return service.endpoint;
+  if (service.service_type === "ai") return env.aiServiceUrl || null;
+  if (service.endpoint.startsWith("/")) return `http://localhost:${env.port || 5000}${service.endpoint}`;
+  return null;
+}
+
 function buildServiceCheckResult(service, { ok, latencyMs }) {
   return {
     id: service.id,
@@ -32,4 +40,5 @@ module.exports = {
   buildServiceCheckResult,
   classifyServiceResult,
   normalizeAuditLogRow,
+  resolveServiceUrl,
 };
