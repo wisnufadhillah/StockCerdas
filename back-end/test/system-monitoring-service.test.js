@@ -4,6 +4,7 @@ const test = require("node:test");
 const {
   classifyServiceResult,
   normalizeAuditLogRow,
+  resolveServiceUrl,
 } = require("../src/services/system-monitoring-service");
 
 test("classifyServiceResult marks fast successful checks online", () => {
@@ -42,4 +43,18 @@ test("normalizeAuditLogRow exposes actor and fallback metadata safely", () => {
     metadata: {},
     created_at: "2026-05-31T10:00:00.000Z",
   });
+});
+
+test("resolveServiceUrl keeps full Streamlit Cloud URL for dashboard data", () => {
+  assert.equal(
+    resolveServiceUrl({ service_type: "data-science", endpoint: "https://stockcerdas.streamlit.app/" }, { port: 5000 }),
+    "https://stockcerdas.streamlit.app/"
+  );
+});
+
+test("resolveServiceUrl resolves local API paths to backend health URLs", () => {
+  assert.equal(
+    resolveServiceUrl({ service_type: "worker", endpoint: "/api/import/health" }, { port: 5000 }),
+    "http://localhost:5000/api/import/health"
+  );
 });

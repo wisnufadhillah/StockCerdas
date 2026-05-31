@@ -1,7 +1,7 @@
 const { pool } = require("../db/pool");
 const { env } = require("../config/env");
 const { recordAuditLog } = require("../services/audit-log-service");
-const { buildServiceCheckResult, normalizeAuditLogRow } = require("../services/system-monitoring-service");
+const { buildServiceCheckResult, normalizeAuditLogRow, resolveServiceUrl } = require("../services/system-monitoring-service");
 
 async function getUsers(req, res) {
   const result = await pool.query(
@@ -79,16 +79,8 @@ async function getSystemServices(req, res) {
   res.json({ status: "success", data: result.rows });
 }
 
-function resolveServiceUrl(service) {
-  if (!service.endpoint) return null;
-  if (/^https?:\/\//i.test(service.endpoint)) return service.endpoint;
-  if (service.service_type === "ai") return env.aiServiceUrl;
-  if (service.endpoint.startsWith("/")) return `http://localhost:${env.port}${service.endpoint}`;
-  return null;
-}
-
 async function checkService(service) {
-  const targetUrl = resolveServiceUrl(service);
+  const targetUrl = resolveServiceUrl(service, env);
   const startedAt = Date.now();
 
   if (!targetUrl) {
