@@ -19,6 +19,8 @@ streamlit run streamlit_app.py
 - `../AI/retail_prediction_model.keras`: model TensorFlow siap produksi.
 - `../AI/app.py`: FastAPI inference endpoint untuk model AI.
 
+File CSV penuh di-ignore dari repository karena ukurannya besar. Jika CSV tidak tersedia di Streamlit Cloud, dashboard otomatis memakai sample data kecil agar reviewer tetap bisa membuka halaman dan melihat struktur insight. Untuk analisis penuh, jalankan lokal dengan `retail_cleaned.csv` dan `retail_feature_engineered.csv` di folder ini.
+
 ## Checklist yang Ditampilkan
 
 - Problem discovery dan solusi utama.

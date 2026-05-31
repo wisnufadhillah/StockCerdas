@@ -4,6 +4,8 @@ import json
 import pandas as pd
 import streamlit as st
 
+from streamlit_data import load_csv_or_sample
+
 
 BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent
@@ -18,8 +20,8 @@ st.set_page_config(
 
 
 @st.cache_data
-def load_csv(path: Path) -> pd.DataFrame:
-    return pd.read_csv(path, sep=None, engine="python")
+def load_csv(path: Path, dataset_type: str) -> pd.DataFrame:
+    return load_csv_or_sample(path, dataset_type)
 
 
 @st.cache_data
@@ -40,8 +42,12 @@ def checklist_item(label: str, passed: bool, detail: str) -> None:
     st.caption(detail)
 
 
-cleaned = load_csv(BASE_DIR / "retail_cleaned.csv")
-features = load_csv(BASE_DIR / "retail_feature_engineered.csv")
+cleaned_csv_path = BASE_DIR / "retail_cleaned.csv"
+features_csv_path = BASE_DIR / "retail_feature_engineered.csv"
+using_sample_data = not cleaned_csv_path.exists() or not features_csv_path.exists()
+
+cleaned = load_csv(cleaned_csv_path, "cleaned")
+features = load_csv(features_csv_path, "features")
 evaluation = load_json(AI_DIR / "artifacts" / "evaluation_report.json")
 feature_columns = load_json(AI_DIR / "artifacts" / "feature_columns.json")
 
@@ -61,6 +67,11 @@ for column in numeric_feature_columns:
 
 st.title("StockSmart: Smart Inventory Forecasting")
 st.caption("Dashboard Streamlit untuk insight Data Science, rekomendasi restock, dan bukti integrasi AI forecasting.")
+if using_sample_data:
+    st.warning(
+        "Dashboard sedang memakai sample data karena file CSV penuh tidak ikut repository/deploy. "
+        "Untuk analisis lengkap, jalankan lokal dengan retail_cleaned.csv dan retail_feature_engineered.csv di folder data-science."
+    )
 
 with st.sidebar:
     st.header("Filter Analisis")
