@@ -10,11 +10,35 @@ export type SessionUser = {
 };
 
 const SESSION_KEY = "stockcerdas_session";
+const MAX_STORED_PROFILE_IMAGE_LENGTH = 200_000;
+
+export function createStoredSession(session: SessionUser): SessionUser {
+  const profileImageUrl = session.profile_image_url || null;
+
+  return {
+    ...session,
+    profile_image_url: profileImageUrl && profileImageUrl.length <= MAX_STORED_PROFILE_IMAGE_LENGTH ? profileImageUrl : null,
+  };
+}
+
+export function createCookieSession(session: SessionUser): SessionUser {
+  return {
+    ...session,
+    profile_image_url: null,
+  };
+}
 
 export function saveSession(session: SessionUser) {
-  const value = JSON.stringify(session);
-  localStorage.setItem(SESSION_KEY, value);
-  document.cookie = `${SESSION_KEY}=${encodeURIComponent(value)}; path=/; max-age=86400; SameSite=Lax`;
+  const storedValue = JSON.stringify(createStoredSession(session));
+  const cookieValue = JSON.stringify(createCookieSession(session));
+
+  try {
+    localStorage.setItem(SESSION_KEY, storedValue);
+  } catch (error) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(createStoredSession({ ...session, profile_image_url: null })));
+  }
+
+  document.cookie = `${SESSION_KEY}=${encodeURIComponent(cookieValue)}; path=/; max-age=86400; SameSite=Lax`;
 }
 
 export function clearSession() {
