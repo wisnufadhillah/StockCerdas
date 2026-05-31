@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, FormEvent } from "react";
 import { LogoutButton } from "@/dashboard/logout-button";
 import { SessionProfile } from "@/dashboard/session-profile";
+import { downloadReportCsv } from "@/dashboard/report-export";
 import { saveSession } from "@/auth/session";
 import * as api from "@/lib/api";
 import {
@@ -91,7 +92,7 @@ const pageTitles: Record<string, { eyebrow: string; title: string; cta: string; 
   "superadmin-dashboard": { eyebrow: "Dashboard Super Admin", title: "Pantau kesehatan platform", cta: "Export Ringkasan", ctaHref: "/dashboard/superadmin/monitoring" },
   "superadmin-pengguna": { eyebrow: "Manajemen Pengguna", title: "Kelola akun UMKM", cta: "Tambah Akun", ctaHref: "/dashboard/superadmin/pengguna/tambah" },
   "superadmin-monitoring": { eyebrow: "Monitoring Sistem", title: "Status API, AI, dan integrasi data", cta: "Refresh Status", ctaHref: "/dashboard/superadmin/monitoring" },
-  "superadmin-pengaturan": { eyebrow: "Pengaturan Sistem", title: "Konfigurasi global platform", cta: "Tambah Konfigurasi", ctaHref: "/dashboard/superadmin/pengaturan/tambah" },
+  "superadmin-pengaturan": { eyebrow: "Pengaturan Sistem", title: "Konfigurasi global platform", cta: "" },
 };
 
 export function DashboardShell({ role, view = "dashboard", action }: { role: DashboardRole; view?: DashboardView; action?: DashboardAction }) {
@@ -154,7 +155,7 @@ export function DashboardShell({ role, view = "dashboard", action }: { role: Das
                     </button>
                   )
                 )}
-                <Link href={page.ctaHref ?? "#"} className="inline-flex h-[38px] items-center justify-center rounded-lg border border-transparent bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]">{page.cta}</Link>
+                {page.cta && <Link href={page.ctaHref ?? "#"} className="inline-flex h-[38px] items-center justify-center rounded-lg border border-transparent bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]">{page.cta}</Link>}
                 <LogoutButton compact />
               </div>
             </div>
@@ -176,53 +177,14 @@ export function DashboardShell({ role, view = "dashboard", action }: { role: Das
         </section>
       </div>
       {showUpgradePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172033]/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-[420px] rounded-2xl border border-[#d8dde5] bg-white p-6 shadow-[0_24px_70px_rgba(17,24,39,0.22)]">
-            <p className="text-sm font-extrabold uppercase text-[#0f8276]">Upgrade Paket</p>
-            <h2 className="mt-2 text-2xl font-extrabold text-[#172033]">Aktifkan fitur Pro</h2>
-            <p className="mt-3 text-sm font-medium leading-6 text-[#657181]">
-              Paket Pro membuka akses forecasting 30 hari, multi-toko, import XLSX, sinkronisasi API, dan rekomendasi restock otomatis.
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setShowUpgradePrompt(false)}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-[#cfd6df] px-4 text-sm font-extrabold text-[#334155] transition hover:border-[#0f8276] hover:text-[#0f8276]"
-              >
-                Nanti saja
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPaymentConfirm(true)}
-                className="inline-flex h-10 items-center justify-center rounded-lg bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]"
-              >
-                Lihat Paket Pro
-              </button>
-            </div>
-            {showPaymentConfirm && (
-              <div className="mt-6 rounded-xl border border-[#d8dde5] bg-[#f8fafc] p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-extrabold text-[#172033]">Paket Pro</p>
-                    <p className="mt-1 text-3xl font-extrabold text-[#0f8276]">Rp 150K<span className="text-sm text-[#657181]">/30 hari</span></p>
-                  </div>
-                  <span className="rounded-full bg-[#edf8f6] px-3 py-1 text-xs font-extrabold uppercase text-[#0f8276]">Popular</span>
-                </div>
-                <ul className="mt-4 space-y-2 text-sm font-semibold text-[#526072]">
-                  <li>Forecasting AI sampai 30 hari</li>
-                  <li>Multi-toko hingga 3 cabang</li>
-                  <li>Import CSV/XLSX dan sinkronisasi API</li>
-                </ul>
-                <button
-                  type="button"
-                  className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]"
-                >
-                  Konfirmasi Pembayaran
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <UpgradeModal
+          showPaymentConfirm={showPaymentConfirm}
+          onClose={() => {
+            setShowUpgradePrompt(false);
+            setShowPaymentConfirm(false);
+          }}
+          onShowPayment={() => setShowPaymentConfirm(true)}
+        />
       )}
     </main>
   );
@@ -250,6 +212,8 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
   const [tenantId, setTenantId] = useState<number | null>(null);
   const [plan, setPlan] = useState<string>("free");
   const [account, setAccount] = useState<any>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
 
   useEffect(() => {
     const sessionStr = localStorage.getItem("stockcerdas_session");
@@ -398,7 +362,7 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
           {plan === "pro" ? "Prediksi AI Pro (30 Hari) diaktifkan." : "Paket Free Anda mendukung Prediksi AI maksimal 7 Hari. Upgrade ke Pro untuk fitur lebih lanjut."}
         </p>
       </Panel>
-      <Panel title="Hasil Prediksi Terbaru" action="Lihat semua" actionHref="/dashboard/useradmin/forecasting">
+      <Panel title="Hasil Prediksi Terbaru">
         <RecommendationList data={predictions} />
       </Panel>
     </div>
@@ -437,10 +401,13 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
     return (
       <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
         <div className="col-span-full"><StoreSelector /></div>
-        <Panel title="Upload File Dataset" action="Pilih File">
+        <Panel title="Upload File Dataset">
           <form onSubmit={handleUpload} className="flex flex-col gap-4">
             <div className="rounded-lg border-2 border-dashed border-[#e0e5ec] p-6 text-center">
-              <input type="file" name="file" accept={plan === "pro" ? ".csv,.xlsx" : ".csv"} className="mb-2 w-full text-sm" required />
+              <input id="dataset-file" type="file" name="file" accept={plan === "pro" ? ".csv,.xlsx" : ".csv"} className="sr-only" required />
+              <label htmlFor="dataset-file" className="inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-[#cfd6df] bg-white px-4 text-sm font-extrabold text-[#0f8276] transition hover:border-[#0f8276] hover:bg-[#edf8f6]">
+                Pilih file
+              </label>
               <p className="text-xs text-[#657181]">
                 {plan === "pro" ? "Format .csv atau .xlsx (Tanpa Batas Baris)" : "Hanya format .csv (Maksimal 500 Baris). Upgrade ke Pro untuk .xlsx."}
               </p>
@@ -510,12 +477,12 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
       <div className="grid gap-6">
         <StoreSelector />
         <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-          <Panel title="Statistik Transaksi" action="Export laporan">
+          <Panel title="Statistik Transaksi" action="Export laporan" onActionClick={() => downloadReportCsv({ products, transactions })}>
              <div className="p-4 h-[300px] flex items-center justify-center">
                <Line data={lineData} options={{ responsive: true, maintainAspectRatio: false }} />
              </div>
           </Panel>
-          <Panel title="Proporsi Stok Kategori" action="Detail">
+          <Panel title="Proporsi Stok Kategori">
              <div className="p-4 h-[300px] flex items-center justify-center">
                <Doughnut data={doughnutData} options={{ responsive: true, maintainAspectRatio: false }} />
              </div>
@@ -567,6 +534,16 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
 
   if (view === "pengaturan") return (
     <div className="grid gap-6">
+      {showUpgradePrompt && (
+        <UpgradeModal
+          showPaymentConfirm={showPaymentConfirm}
+          onClose={() => {
+            setShowUpgradePrompt(false);
+            setShowPaymentConfirm(false);
+          }}
+          onShowPayment={() => setShowPaymentConfirm(true)}
+        />
+      )}
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel title="Profil Akun" action="Edit profil" actionHref="/dashboard/useradmin/pengaturan/edit">
           <div className="flex flex-wrap items-start gap-4 rounded-xl border border-[#e0e5ec] bg-[#f8fafb] p-5">
@@ -585,7 +562,7 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
           </div>
         </Panel>
 
-        <Panel title="Paket Berlangganan" action={plan === "pro" ? "Paket aktif" : "Upgrade"} actionHref={plan === "pro" ? "#" : "/paket"}>
+        <Panel title="Paket Berlangganan" action={plan === "pro" ? "Paket aktif" : "Upgrade"} onActionClick={plan === "pro" ? undefined : () => setShowUpgradePrompt(true)}>
           <div className="rounded-xl border border-[#e0e5ec] bg-white p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -603,13 +580,7 @@ function UserAdminContent({ view }: { view: UserAdminView }) {
         </Panel>
       </div>
 
-      <Panel title="Integrasi & Batas Akun" action="Simpan perubahan">
-        <FeatureGrid items={
-          [["Status API", "Terhubung ke endpoint inventaris dan prediksi."], ["Limitasi Toko", plan === "pro" ? "3 Toko Tersedia" : "1 Toko Tersedia (Maksimal untuk Free)"]]
-        } />
-      </Panel>
-
-      <Panel title="Cabang Toko" action={plan === "pro" ? "Tambah Toko" : "Upgrade ke Pro"} actionHref={plan === "pro" ? "/dashboard/useradmin/pengaturan/tambah" : "#"}>
+      <Panel title="Cabang Toko" action={plan === "pro" ? "Tambah Toko" : "Upgrade ke Pro"} actionHref={plan === "pro" ? "/dashboard/useradmin/pengaturan/tambah" : undefined} onActionClick={plan === "pro" ? undefined : () => setShowUpgradePrompt(true)}>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead>
@@ -766,7 +737,7 @@ function SuperAdminContent({ view }: { view: SuperAdminView }) {
   );
   if (view === "pengaturan") return (
     <div className="grid gap-6">
-      <Panel title="Konfigurasi Global" action="Tambah konfigurasi" actionHref="/dashboard/superadmin/pengaturan/tambah">
+      <Panel title="Konfigurasi Global">
         <FeatureGrid items={[["Periode prediksi default", "7 hari"], ["Format import aktif", "CSV dan XLSX"]]} withActions />
       </Panel>
     </div>
@@ -796,6 +767,7 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
   
   const [data, setData] = useState<any>(null);
   const [optionsData, setOptionsData] = useState<any[]>([]);
+  const [reportData, setReportData] = useState<{ products: any[]; transactions: any[] }>({ products: [], transactions: [] });
   const [loading, setLoading] = useState(action === "edit" || action === "detail" || action === "hapus");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -816,7 +788,13 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
   }, []);
 
   useEffect(() => {
-    if (view === "forecasting" || view === "transaksi") {
+    if (view === "laporan" && action === "tambah") {
+      Promise.all([api.getProducts(), api.getTransactions()])
+        .then(([productsRes, transactionsRes]) => {
+          setReportData({ products: productsRes.data || [], transactions: transactionsRes.data || [] });
+        })
+        .catch((err: any) => setError(err.message));
+    } else if (view === "forecasting" || view === "transaksi") {
       api.getProducts().then(res => {
          const sessionStr = localStorage.getItem("stockcerdas_session");
          let pData = res.data || [];
@@ -843,7 +821,7 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
         } catch(e) {}
       }
     }
-  }, [view]);
+  }, [action, view]);
 
   useEffect(() => {
     if (view === "pengaturan" && role === "useradmin" && action === "edit") {
@@ -993,13 +971,17 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
     }
   };
 
-  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => setProfilePreview(String(reader.result || ""));
-    reader.readAsDataURL(file);
+    try {
+      setError(null);
+      const resizedImage = await resizeProfileImage(file);
+      setProfilePreview(resizedImage);
+    } catch (err: any) {
+      setError(err.message || "Gagal memproses gambar profil.");
+    }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -1031,6 +1013,52 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
             {isSubmitting ? 'Menghapus...' : 'Hapus'}
           </button>
           </div>
+        </div>
+      </Panel>
+    );
+  }
+
+  if (view === "pengaturan" && role === "superadmin" && action === "tambah") {
+    return (
+      <Panel title="Tambah pengaturan" action="Kembali" actionHref={backHref}>
+        <div className="rounded-lg border border-[#cfd6df] bg-[#f8fafb] p-5">
+          <p className="text-lg font-extrabold text-[#172033]">Fitur tambah konfigurasi belum tersedia</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-[#657181]">
+            Konfigurasi global saat ini hanya ditampilkan sebagai referensi sistem. Tombol tambah konfigurasi dihapus agar tidak membuka form kosong.
+          </p>
+        </div>
+      </Panel>
+    );
+  }
+
+  if (view === "import-data" && role === "useradmin" && action === "tambah") {
+    return (
+      <Panel title="Upload dataset" action="Buka Import Data" actionHref={backHref}>
+        <div className="rounded-lg border border-[#cfd6df] bg-[#f8fafb] p-5">
+          <p className="text-lg font-extrabold text-[#172033]">Upload dataset dilakukan dari halaman Import Data</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-[#657181]">
+            Gunakan tombol Pilih file pada halaman Import Data untuk memilih CSV atau XLSX sesuai paket akun, lalu tekan Upload File.
+          </p>
+        </div>
+      </Panel>
+    );
+  }
+
+  if (view === "laporan" && role === "useradmin" && action === "tambah") {
+    return (
+      <Panel title="Export laporan" action="Kembali" actionHref={backHref}>
+        <div className="grid gap-4 rounded-lg border border-[#cfd6df] bg-[#f8fafb] p-5">
+          <p className="text-lg font-extrabold text-[#172033]">Download laporan operasional</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-[#657181]">
+            File CSV berisi ringkasan produk dan transaksi dari akun yang sedang aktif. Gunakan file ini untuk arsip atau analisis lanjutan.
+          </p>
+          <button
+            type="button"
+            onClick={() => downloadReportCsv(reportData)}
+            className="inline-flex h-10 w-fit items-center justify-center rounded-lg bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]"
+          >
+            Download CSV
+          </button>
         </div>
       </Panel>
     );
@@ -1176,6 +1204,41 @@ function ActionPage({ role, view, action }: { role: DashboardRole; view: Dashboa
   );
 }
 
+function resizeProfileImage(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      reject(new Error("File profil harus berupa gambar."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Gagal membaca file gambar."));
+    reader.onload = () => {
+      const source = String(reader.result || "");
+      const img = new window.Image();
+      img.onerror = () => reject(new Error("Gambar profil tidak valid."));
+      img.onload = () => {
+        const maxSize = 160;
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          reject(new Error("Browser tidak mendukung kompresi gambar."));
+          return;
+        }
+        context.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = source;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function MetricGrid({ metrics }: { metrics: Metric[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1190,19 +1253,75 @@ function MetricGrid({ metrics }: { metrics: Metric[] }) {
   );
 }
 
-function Panel({ title, action, actionHref, className = "", children }: { title: string; action?: string; actionHref?: string; className?: string; children: React.ReactNode }) {
+function Panel({ title, action, actionHref, onActionClick, className = "", children }: { title: string; action?: string; actionHref?: string; onActionClick?: () => void; className?: string; children: React.ReactNode }) {
   return (
     <section className={`rounded-lg border border-[#d8dde5] bg-white p-5 ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold text-[#172033]">{title}</h2>
-        {action && (
+        {action && onActionClick ? (
+          <button type="button" onClick={onActionClick} className="rounded-lg border border-[#cfd6df] px-3 py-2 text-xs font-extrabold text-[#0f8276] transition hover:border-[#0f8276] hover:bg-[#edf8f6]">
+            {action}
+          </button>
+        ) : action ? (
           <Link href={actionHref ?? "#"} className="rounded-lg border border-[#cfd6df] px-3 py-2 text-xs font-extrabold text-[#0f8276] transition hover:border-[#0f8276] hover:bg-[#edf8f6]">
             {action}
           </Link>
-        )}
+        ) : null}
       </div>
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+function UpgradeModal({ showPaymentConfirm, onClose, onShowPayment }: { showPaymentConfirm: boolean; onClose: () => void; onShowPayment: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#172033]/40 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-[420px] rounded-2xl border border-[#d8dde5] bg-white p-6 shadow-[0_24px_70px_rgba(17,24,39,0.22)]">
+        <p className="text-sm font-extrabold uppercase text-[#0f8276]">Upgrade Paket</p>
+        <h2 className="mt-2 text-2xl font-extrabold text-[#172033]">Aktifkan fitur Pro</h2>
+        <p className="mt-3 text-sm font-medium leading-6 text-[#657181]">
+          Paket Pro membuka akses forecasting 30 hari, multi-toko, import XLSX, sinkronisasi API, dan rekomendasi restock otomatis.
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-[#cfd6df] px-4 text-sm font-extrabold text-[#334155] transition hover:border-[#0f8276] hover:text-[#0f8276]"
+          >
+            Nanti saja
+          </button>
+          <button
+            type="button"
+            onClick={onShowPayment}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]"
+          >
+            Lihat Paket Pro
+          </button>
+        </div>
+        {showPaymentConfirm && (
+          <div className="mt-6 rounded-xl border border-[#d8dde5] bg-[#f8fafc] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-extrabold text-[#172033]">Paket Pro</p>
+                <p className="mt-1 text-3xl font-extrabold text-[#0f8276]">Rp 150K<span className="text-sm text-[#657181]">/30 hari</span></p>
+              </div>
+              <span className="rounded-full bg-[#edf8f6] px-3 py-1 text-xs font-extrabold uppercase text-[#0f8276]">Popular</span>
+            </div>
+            <ul className="mt-4 space-y-2 text-sm font-semibold text-[#526072]">
+              <li>Forecasting AI sampai 30 hari</li>
+              <li>Multi-toko hingga 3 cabang</li>
+              <li>Import CSV/XLSX dan sinkronisasi API</li>
+            </ul>
+            <button
+              type="button"
+              className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-lg bg-[#0f8276] px-4 text-sm font-extrabold text-white transition hover:bg-[#0b6f66]"
+            >
+              Konfirmasi Pembayaran
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
