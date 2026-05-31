@@ -5,6 +5,7 @@ const {
   classifyServiceResult,
   normalizeAuditLogRow,
   resolveServiceUrl,
+  getServiceTimeoutMs,
 } = require("../src/services/system-monitoring-service");
 
 test("classifyServiceResult marks fast successful checks online", () => {
@@ -57,4 +58,12 @@ test("resolveServiceUrl resolves local API paths to backend health URLs", () => 
     resolveServiceUrl({ service_type: "worker", endpoint: "/api/import/health" }, { port: 5000 }),
     "http://localhost:5000/api/import/health"
   );
+});
+
+test("getServiceTimeoutMs gives Streamlit Cloud enough time to wake up", () => {
+  assert.equal(getServiceTimeoutMs({ service_type: "data-science" }), 10000);
+});
+
+test("getServiceTimeoutMs keeps local backend checks fast", () => {
+  assert.equal(getServiceTimeoutMs({ service_type: "backend" }), 3000);
 });

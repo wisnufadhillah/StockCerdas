@@ -27,6 +27,12 @@ function resolveServiceUrl(service, env = {}) {
   return null;
 }
 
+function getServiceTimeoutMs(service) {
+  if (service.service_type === "data-science") return 10000;
+  if (/^https?:\/\//i.test(service.endpoint || "")) return 10000;
+  return 3000;
+}
+
 function buildServiceCheckResult(service, { ok, latencyMs }) {
   return {
     id: service.id,
@@ -39,6 +45,7 @@ function buildServiceCheckResult(service, { ok, latencyMs }) {
 module.exports = {
   buildServiceCheckResult,
   classifyServiceResult,
+  getServiceTimeoutMs,
   normalizeAuditLogRow,
   resolveServiceUrl,
 };
